@@ -1,5 +1,9 @@
-# to burn the arduino nano
+New version of https://github.com/bitelxux/levelsensor
 
-amake -u nano328old sensor.agua.ino /dev/ttyUSB0
+Based in a ESP8266 reading from the sensor and uploading to the server.
 
+It supports connection outages by storing values locally with a timestamp
+and sending them once the connection is resumed.
 
+HEADS UP!: Server part is WIP. current server.py and server2.py are still
+those from the original project.
