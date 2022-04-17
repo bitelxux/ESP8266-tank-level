@@ -1,0 +1,46 @@
+# In case we want to replace the jsn-S04T for
+# the US-100
+
+
+void readSensor(byte *temperature, short int *value){
+
+    US100Serial.flush();
+    US100Serial.write(0x55);
+
+    delay(100);
+
+    if(US100Serial.available() >= 2)
+    {
+        MSByteDist = US100Serial.read();
+        LSByteDist = US100Serial.read();
+        mmDist  = MSByteDist * 256 + LSByteDist;
+        if((mmDist > 1) && (mmDist < 10000))
+        {
+            Serial.print("Distance: ");
+            Serial.print(mmDist, DEC);
+            Serial.println(" mm");
+        }
+    }
+
+    US100Serial.flush();
+    US100Serial.write(0x50);
+
+    delay(100);
+    if(US100Serial.available() >= 1)
+    {
+        temp = US100Serial.read();
+        if((temp > 1) && (temp < 130)) // temprature is in range
+        {
+            temp -= 45; // correct 45º offset
+            Serial.print("Temp: ");
+            Serial.print(temp, DEC);
+            Serial.println(" ºC.");
+        }
+    }
+
+    *temperature = (byte) temp;
+    *value = mmToLitres(mmDist);
+
+}
+
+
