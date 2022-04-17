@@ -2,10 +2,7 @@ name:=esp8266.water.level.ino
 port:=/dev/ttyUSB0
 ip:=192.168.1.156
 
-all:
-	make clean
-	make build
-	make upload_usb
+all: clean build upload
 
 build: $(name)
 	arduino-cli compile --output-dir ./build --fqbn esp8266:esp8266:nodemcu  $(name)
