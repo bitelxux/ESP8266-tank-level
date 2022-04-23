@@ -12,14 +12,12 @@ Install NTPClient from manage libraries
 */
 
 //Libraries
-#include <EEPROM.h>//https://github.com/esp8266/Arduino/blob/master/libraries/EEPROM/EEPROM.h
-#include <NTPClient.h>
-#include <WiFiUdp.h>
+
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
-#include <WiFiClient.h>
 #include <SoftwareSerial.h>
-#include <ArduinoOTA.h> 
+
+#include <cnn.h>
 
 // This is for each variable to use it's real size when stored
 // in the EEPROM
@@ -62,9 +60,7 @@ char IP[16];
 SoftwareSerial sensor(RX, TX);
 
 // prototipes
-void initNtp();
 void FlushStoredData();
-void readEEPROM();
 void registerNewReading();
 void blinkLed();
 void fakeWrite();
@@ -84,30 +80,28 @@ unsigned int tConnect = millis();
 unsigned long tLastConnectionAttempt = 0;
 unsigned long tBoot = millis();
 
+App* app;
+Log logger(ID, log_server);
 
 // Define NTP Client to get time
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org");
+//WiFiUDP ntpUDP;
+//NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
 int counter = 0; // number of registers in EEPROM
-unsigned long epochTime = 0;
 
-struct
-{
-    boolean enabled;
-    unsigned long timer;
-    unsigned long lastRun;
-    void (*function)();
-    char* functionName;
-} TIMERS[] = {
-  { true, 60*1000, 0, &imAlive, "imAlive" },
-  { true, 1*1000, 0, &handleOTA, "handleOTA" },
-  { true, 30*1000, 0, &FlushStoredData, "FlushStoredData" },
-  { false, 20*1000, 0, &readEEPROM, "readEEPROM" },
-  { true, 3600*1000, 0, &initNtp, "initNtp" },
-  { true, 1*1000, 0, &registerNewReading, "registerNewReading" },  
-  { true, 1*1000, 0, &blinkLed, "blinkLed" },  
-  { true, 5*1000, 0, &connectIfNeeded, "connectIfNeeded" },  
+//Timer TIMERS[] = {
+//  { true, 60*1000, 0, &imAlive, "imAlive" },
+//  { true, 1*1000, 0, &handleOTA, "handleOTA" },
+//  { true, 30*1000, 0, &FlushStoredData, "FlushStoredData" },
+//  { true, 1*1000, 0, &registerNewReading, "registerNewReading" },  
+//  { true, 1*1000, 0, &blinkLed, "blinkLed" },  
+//  { true, 5*1000, 0, &connectIfNeeded, "connectIfNeeded" },  
+//};
+
+Timer TIMERS[] = {
+  {5000, connectIfNeeded, "connectIfNeeded"},
+  {1000, handleOTA, "handleOTA" },
+  {1000, blinkLed, "blinkLed" },
 };
 
 typedef struct
@@ -115,6 +109,13 @@ typedef struct
   unsigned long timestamp;
   short int value;
 } Reading;
+
+void addTimers(){
+  byte NUM_TIMERS = (sizeof(TIMERS) / sizeof(TIMERS[0]));
+  for (int i=0; i<NUM_TIMERS; i++){
+    app->addTimer(&TIMERS[i]);  
+  }
+}
 
 void setup() {
   pinMode(LED, OUTPUT);
@@ -133,39 +134,11 @@ void setup() {
   
   // sensor
   sensor.begin(9600);
+
+  app = new App(ssid, password, log_server, ID);
+  addTimers();
 }
 
-void handleOTA(){
-  ArduinoOTA.handle();
-}
-
-bool send(String what){
-
-  if (WiFi.status() != WL_CONNECTED){
-    return false;
-  }
-
-  bool result;
-  WiFiClient client;
-  HTTPClient http;
-  //Serial.print("sending ");
-  //Serial.println(what.c_str());
-  http.begin(client, what.c_str());
-  int httpResponseCode = http.GET();
-
-  if (httpResponseCode == 200){
-        result = true;
-      }
-      else {
-        Serial.print("[send] Error code: ");
-        Serial.println(httpResponseCode);
-        result = false;
-      }
-      // Free resources
-      http.end();
-
-      return result;
-}
 
 void ledError(){
     digitalWrite(LED_RED, HIGH);
@@ -192,13 +165,13 @@ void registerNewReading(){
 
   value = readSensor();
   if (value == -1){
-    log("Error reading value from sensor");
+    logger.log("Error reading value from sensor");
     ledError();
     return;
   }
 
-  if (epochTime){
-    unsigned long now = epochTime + int(millis()/1000);
+  if (app->epochTime){
+    unsigned long now = app->epochTime + int(millis()/1000);
     sprintf(buffer, "%s/add/%d:%d", baseURL, now, value);
 
     // try to send to the server
@@ -206,13 +179,13 @@ void registerNewReading(){
     if (send(buffer)){
       ledOK();
       sprintf(buffer, "Sent %d:%d", now, value);
-      log(buffer);
+      logger,log(buffer);
     }
     else{
       ledError();
       writeReading(now, value);
       sprintf(buffer, "Locally stored %d:%d", now, value);
-      log(buffer);
+      logger.log(buffer);
     }
         
   }
@@ -236,7 +209,7 @@ int readSensor(){
     }
 
     //sprintf(buffer, "lectura: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-    //log(buffer);
+    //logger.log(buffer);
 
     CS = dataBuffer[0] + dataBuffer[1] + dataBuffer[2];
     if (dataBuffer[3] == CS){
@@ -245,7 +218,7 @@ int readSensor(){
     }
     else{
       sprintf(buffer, "CS Error: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-      log(buffer);
+      logger.log(buffer);
       return -1;
     }
    }
@@ -259,7 +232,7 @@ void FlushStoredData(){
   int sent = 0;
   
   if (WiFi.status() != WL_CONNECTED){
-    log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the internet :-/.");
+    logger.log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the internet :-/.");
     return;
   }
 
@@ -289,7 +262,7 @@ void FlushStoredData(){
 
       if (!send(buffer)){
         //sprintf(buffer, "[FLUSH_STORED_DATA] Error sending register [%d]", cursor);
-        //log(buffer);
+        //logger.log(buffer);
         errors = true;
       }
       else
@@ -297,7 +270,7 @@ void FlushStoredData(){
         ledOK();
         sent ++;
         sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d]", cursor);
-        log(buffer);
+        logger.log(buffer);
         // We don't want to write the whole struct to save write cycles
         value = -1;
         EEPROM.put(regAddress + sizeof(reading.timestamp), value);
@@ -311,63 +284,8 @@ void FlushStoredData(){
       sprintf(buffer, "[FLUSH_STORED_DATA] %d records sent [errors]", sent);    
   }
   
-  log(buffer);
+  logger.log(buffer);
 
-}
-
-void initNtp(){
-  // Initialize a NTPClient to get time
-  log("[NTP_UPDATE] Updating NTP time");
-  timeClient.begin();
-  // Set offset time in seconds to adjust for your timezone, for example:
-  // GMT +1 = 3600
-  // GMT +8 = 28800
-  // GMT -1 = -3600
-  // GMT 0 = 0
-  timeClient.setTimeOffset(7200);  
-  timeClient.update();
-  epochTime = timeClient.getEpochTime();
-  sprintf(buffer, "epochTime set to %d", epochTime);
-  log(buffer);
-}
-
-
-void readEEPROM(){
-  
-  unsigned short int counter = readEEPROMCounter();
-  unsigned short int cursor = 0;
-  int regAddress;
-  Reading reading;
-
-  int regSize = sizeof(reading);
-
-  sprintf(buffer, "%d registers currently stored in EEPROM", counter);
-  log(buffer);
-  
-  /*
-  for (cursor = 0; cursor < counter; cursor++){
-    regAddress = 2 + cursor*regSize; // +2 is to skip the counter bytes
-    EEPROM.get(regAddress, reading);
-    sprintf(buffer, "Address %d: %d:%d", regAddress, reading.timestamp, reading.value);
-    log(buffer);
-  }
-  */
-    
-}
-
-void resetEEPROM(){
-  
-  int address = 0;
-  unsigned short int counter=0;
-  EEPROM.put(address, counter);
-  EEPROM.commit();  
-  int a = 1/0; // I don't want to continue
-}
-
-unsigned short int readEEPROMCounter(){
-  unsigned short int counter;
-  EEPROM.get(0, counter);
-  return counter;
 }
 
 void writeReading(unsigned long in_timestamp, short int in_value){
@@ -391,10 +309,10 @@ void writeReading(unsigned long in_timestamp, short int in_value){
 
     if (currentReading.value == -1){ // Re-use old register
       sprintf(buffer, "Reused position %d", regAddress);
-      log(buffer);
+      logger.log(buffer);
       EEPROM.put(regAddress, newReading);
       if (!EEPROM.commit()) {
-        log("Commit failed on re-use");
+        logger.log("Commit failed on re-use");
       }
       break;
     }
@@ -410,20 +328,10 @@ void writeReading(unsigned long in_timestamp, short int in_value){
       counter += 1;
       EEPROM.put(0, counter); 
       if (!EEPROM.commit()) {
-        log("Commit failed on new register");
+        logger.log("Commit failed on new register");
       }
   }
   
-}
-
-void attendTimers(){
-    byte NUM_TIMERS = (sizeof(TIMERS) / sizeof(TIMERS[0]));
-    for (int i=0; i<NUM_TIMERS; i++){
-      if (TIMERS[i].enabled && millis() - TIMERS[i].lastRun >= TIMERS[i].timer) {
-        TIMERS[i].function();
-        TIMERS[i].lastRun = millis();
-      }
-    }
 }
 
 void connect(){
@@ -460,7 +368,7 @@ void connect(){
     sprintf(IP, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
     
     sprintf(buffer, "Connected to %s with IP %s", ssid, IP);
-    log(buffer);
+    logger.log(buffer);
 
     ArduinoOTA.begin();
   }
@@ -474,16 +382,10 @@ void connect(){
 }
 
 void blinkLed(){
+  logger.log("This is the led");
   digitalWrite(LED, !digitalRead(LED));
 }
 
-void log(char* msg){
-  char buffer[100];
-  sprintf(buffer, "%s/log/[%s] %s", log_server, ID, msg);
-  String toSend = buffer;
-  toSend.replace(" ", "%20");
-  send(toSend);
-}
 
 void imAlive(){
   IPAddress ip = WiFi.localIP();
@@ -506,13 +408,12 @@ void connectIfNeeded(){
   }  
 
   // also if we don't have time, try to update
-  if (!epochTime){
+  if (!app->epochTime){
     Serial.println("NTP time not updated. Trying to");
-    initNtp();
+    app->initNTP();
   }
 }
 
 void loop() {
-  attendTimers();
-  delay(20);
+  app->attendTimers();
 }
