@@ -84,8 +84,6 @@ App* app;
 int counter = 0; // number of registers in EEPROM
 
 //Timer TIMERS[] = {
-//  { true, 60*1000, 0, &imAlive, "imAlive" },
-//  { true, 1*1000, 0, &handleOTA, "handleOTA" },
 //  { true, 30*1000, 0, &FlushStoredData, "FlushStoredData" },
 //  { true, 1*1000, 0, &registerNewReading, "registerNewReading" },  
 //  { true, 1*1000, 0, &blinkLed, "blinkLed" },  
@@ -94,6 +92,8 @@ int counter = 0; // number of registers in EEPROM
 
 Timer TIMERS[] = {
   {1000, blinkLed, "blinkLed" },
+  {30000, FlushStoredData, "FlushStoredData" },
+  {1000, registerNewReading, "registerNewReading" },  
 };
 
 typedef struct
