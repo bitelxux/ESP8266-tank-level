@@ -18,7 +18,6 @@ unsigned short int readEEPROMCounter();
 void initNTP();
 class App;
 
-#define LED 2
 #define USER_TIMER 0
 #define APP_TIMER 1
 
@@ -59,6 +58,7 @@ class App{
         const char* log_server;
         const char* SSID;
         const char* password;
+	int LED = 2;
 	char IP[16];
 	unsigned long epochTime = 0;
 	unsigned long tLastConnectionAttempt = 0;
@@ -68,6 +68,7 @@ class App{
 	AppTimer t0 {30000, &App::imAlive, "imAlive"};
 	AppTimer t1 {5000, &App::connectIfNeeded, "connectIfNeeded"};
 	AppTimer t2 {1000, &App::handleOTA, "handleOTA"};
+	AppTimer t3 {1000, &App::blinkLED, "blinkLED"};
 
 	Log* logger;
 
@@ -85,6 +86,7 @@ class App{
 	void connectIfNeeded();
 	void connect();
 	void handleOTA();
+	void blinkLED();
 };
 
 

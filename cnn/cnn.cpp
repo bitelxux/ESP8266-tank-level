@@ -30,7 +30,14 @@ App::App(const char* SSID,
     this->addTimer(&this->t0, APP_TIMER);
     this->addTimer(&this->t1, APP_TIMER);
     this->addTimer(&this->t2, APP_TIMER);
+    this->addTimer(&this->t3, APP_TIMER);
 
+    pinMode(LED, OUTPUT);
+
+}
+
+void App::blinkLED(){
+     digitalWrite(this->LED, !digitalRead(this->LED));
 }
 
 void App::addTimer(void* timer, int type){

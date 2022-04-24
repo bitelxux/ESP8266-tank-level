@@ -59,7 +59,6 @@ SoftwareSerial sensor(RX, TX);
 // prototipes
 void FlushStoredData();
 void registerNewReading();
-void blinkLed();
 
 #define ID "tank.level"
 
@@ -71,7 +70,6 @@ const char* baseURL = "http://192.168.1.162:8889/";
 App* app;
 
 Timer TIMERS[] = {
-  {1000, blinkLed, "blinkLed" },
   {30000, FlushStoredData, "FlushStoredData" },
   {1000, registerNewReading, "registerNewReading" },  
 };
@@ -90,7 +88,6 @@ void addTimers(){
 }
 
 void setup() {
-  pinMode(LED, OUTPUT);
   pinMode(LED_BLUE, OUTPUT);
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_GREEN, OUTPUT);
@@ -306,10 +303,6 @@ void writeReading(unsigned long in_timestamp, short int in_value){
   
 }
 
-
-void blinkLed(){
-  digitalWrite(LED, !digitalRead(LED));
-}
 
 void loop() {
   app->attendTimers();
