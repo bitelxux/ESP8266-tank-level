@@ -135,7 +135,7 @@ void setup() {
   sensor.begin(9600);
 
   app = new App(ssid, password, log_server, ID);
-  //addTimers();
+  addTimers();
 }
 
 

@@ -55,16 +55,15 @@ void App::addTimer(void* timer, int type){
 }
 
 void App::attendUserTimer(TimerNode* timerNode){
-    AppTimer* timer = (Timer*) timerNode->timer;
+    Timer* timer = (Timer*) timerNode->timer;
     if (millis() - timerNode->lastRun >= timer->millis){
-        Serial.println("Running user timer");
-        (*this.*timer->function)();
+        timer->function();
+    }
 }
 
 void App::attendAppTimer(TimerNode* timerNode){
     AppTimer* timer = (AppTimer*) timerNode->timer;
     if (millis() - timerNode->lastRun >= timer->millis){
-        Serial.println("Running app timer");
         (*this.*timer->function)();
     }
 }
@@ -78,6 +77,7 @@ void App::attendTimers(){
     }
 
     while (timerNode != NULL){
+
 
 	if (timerNode->type == USER_TIMER){
     	    this->attendUserTimer(timerNode); 
