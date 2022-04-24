@@ -43,8 +43,6 @@ const char* password = "82111847";
 const char* log_server = "http://192.168.1.162:8888";
 const char* baseURL = "http://192.168.1.162:8889/";
 
-App app = App(ssid, password, ID, log_server);
-
 Timer TIMERS[] = {
   {30000, FlushStoredData, "FlushStoredData" },
   {1000, registerNewReading, "registerNewReading" },  
@@ -55,6 +53,8 @@ typedef struct
   unsigned long timestamp;
   short int value;
 } Reading;
+
+App app = App(ssid, password, ID, log_server);
 
 void addTimers(){
   byte NUM_TIMERS = (sizeof(TIMERS) / sizeof(TIMERS[0]));
