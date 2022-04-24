@@ -43,7 +43,7 @@ const char* password = "82111847";
 const char* log_server = "http://192.168.1.162:8888";
 const char* baseURL = "http://192.168.1.162:8889/";
 
-App* app;
+App app = App(ssid, password, ID, log_server);
 
 Timer TIMERS[] = {
   {30000, FlushStoredData, "FlushStoredData" },
@@ -59,7 +59,7 @@ typedef struct
 void addTimers(){
   byte NUM_TIMERS = (sizeof(TIMERS) / sizeof(TIMERS[0]));
   for (int i=0; i<NUM_TIMERS; i++){
-    app->addTimer(&TIMERS[i]);  
+    app.addTimer(&TIMERS[i]);
   }
 }
 
@@ -80,7 +80,6 @@ void setup() {
   // sensor
   sensor.begin(9600);
 
-  app = new App(ssid, password, ID, log_server);
   addTimers();
 }
 
@@ -110,13 +109,13 @@ void registerNewReading(){
 
   value = readSensor();
   if (value == -1){
-    app->log("Error reading value from sensor");
+    app.log("Error reading value from sensor");
     ledError();
     return;
   }
 
-  if (app->epochTime){
-    unsigned long now = app->epochTime + int(millis()/1000);
+  if (app.epochTime){
+    unsigned long now = app.epochTime + int(millis()/1000);
     sprintf(buffer, "%s/add/%d:%d", baseURL, now, value);
 
     // try to send to the server
@@ -124,13 +123,13 @@ void registerNewReading(){
     if (send(buffer)){
       ledOK();
       sprintf(buffer, "Sent %d:%d", now, value);
-      app->log(buffer);
+      app.log(buffer);
     }
     else{
       ledError();
       writeReading(now, value);
       sprintf(buffer, "Locally stored %d:%d", now, value);
-      app->log(buffer);
+      app.log(buffer);
     }
         
   }
@@ -154,7 +153,7 @@ int readSensor(){
     }
 
     //sprintf(buffer, "lectura: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-    //app->log(buffer);
+    //app.log(buffer);
 
     CS = dataBuffer[0] + dataBuffer[1] + dataBuffer[2];
     if (dataBuffer[3] == CS){
@@ -163,7 +162,7 @@ int readSensor(){
     }
     else{
       sprintf(buffer, "CS Error: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-      app->log(buffer);
+      app.log(buffer);
       return -1;
     }
    }
@@ -177,7 +176,7 @@ void FlushStoredData(){
   int sent = 0;
   
   if (WiFi.status() != WL_CONNECTED){
-    app->log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the internet :-/.");
+    app.log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the internet :-/.");
     return;
   }
 
@@ -207,7 +206,7 @@ void FlushStoredData(){
 
       if (!send(buffer)){
         //sprintf(buffer, "[FLUSH_STORED_DATA] Error sending register [%d]", cursor);
-        //app->log(buffer);
+        //app.log(buffer);
         errors = true;
       }
       else
@@ -215,7 +214,7 @@ void FlushStoredData(){
         ledOK();
         sent ++;
         sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d]", cursor);
-        app->log(buffer);
+        app.log(buffer);
         // We don't want to write the whole struct to save write cycles
         value = -1;
         EEPROM.put(regAddress + sizeof(reading.timestamp), value);
@@ -229,7 +228,7 @@ void FlushStoredData(){
       sprintf(buffer, "[FLUSH_STORED_DATA] %d records sent [errors]", sent);    
   }
   
-  app->log(buffer);
+  app.log(buffer);
 
 }
 
@@ -254,10 +253,10 @@ void writeReading(unsigned long in_timestamp, short int in_value){
 
     if (currentReading.value == -1){ // Re-use old register
       sprintf(buffer, "Reused position %d", regAddress);
-      app->log(buffer);
+      app.log(buffer);
       EEPROM.put(regAddress, newReading);
       if (!EEPROM.commit()) {
-        app->log("Commit failed on re-use");
+        app.log("Commit failed on re-use");
       }
       break;
     }
@@ -273,7 +272,7 @@ void writeReading(unsigned long in_timestamp, short int in_value){
       counter += 1;
       EEPROM.put(0, counter); 
       if (!EEPROM.commit()) {
-        app->log("Commit failed on new register");
+        app.log("Commit failed on new register");
       }
   }
   
@@ -281,5 +280,5 @@ void writeReading(unsigned long in_timestamp, short int in_value){
 
 
 void loop() {
-  app->attendTimers();
+  app.attendTimers();
 }
