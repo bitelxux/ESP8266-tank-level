@@ -65,7 +65,7 @@ class App{
 	unsigned long tConnect = 0;
 
 	TimerNode* timers = NULL;
-	AppTimer t0 {1000, &App::imAlive, "imAlive"};
+	AppTimer t0 {30000, &App::imAlive, "imAlive"};
 	AppTimer t1 {5000, &App::connectIfNeeded, "connectIfNeeded"};
 	AppTimer t2 {1000, &App::handleOTA, "handleOTA"};
 

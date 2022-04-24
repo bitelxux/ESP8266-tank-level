@@ -11,7 +11,9 @@ Log::Log(const char* ID, const char* server){
 }
 
 void App::imAlive(){
-  this->logger->log("I'm alive!!");
+  char buffer[30];
+  sprintf(buffer, "[%s] I'm alive!!", this->IP);
+  this->logger->log(buffer);
 }
 
 App::App(const char* SSID,
