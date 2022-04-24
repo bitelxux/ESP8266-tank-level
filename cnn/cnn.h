@@ -55,7 +55,7 @@ class Log{
 class App{
     public:
         const char* ID;
-        const char* server;
+        const char* log_server;
         const char* SSID;
         const char* password;
 	unsigned long epochTime = 0;
@@ -63,10 +63,10 @@ class App{
 	TimerNode* timers = NULL;
 	AppTimer t0 {1000, &App::imAlive, "imAlive"};
 
-	//Log logger;
+	Log* logger;
 
 	App(const char* SSID,
-   	    const char* password,
+   	    const char* log_password,
 	    const char* ID,
 	    const char* server);
 	void initNTP();
@@ -75,6 +75,7 @@ class App{
 	void attendUserTimer(TimerNode* timerNode);
 	void attendAppTimer(TimerNode* timerNode);
 	void imAlive();
+	void log(char* msg);
 };
 
 

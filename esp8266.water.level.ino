@@ -80,7 +80,6 @@ unsigned long tLastConnectionAttempt = 0;
 unsigned long tBoot = millis();
 
 App* app;
-Log logger(ID, log_server);
 
 // Define NTP Client to get time
 //WiFiUDP ntpUDP;
@@ -134,7 +133,11 @@ void setup() {
   // sensor
   sensor.begin(9600);
 
-  app = new App(ssid, password, log_server, ID);
+  app = new App(ssid,
+                password,
+                ID,
+                log_server
+                );
   addTimers();
 }
 
@@ -164,7 +167,7 @@ void registerNewReading(){
 
   value = readSensor();
   if (value == -1){
-    logger.log("Error reading value from sensor");
+    app->log("Error reading value from sensor");
     ledError();
     return;
   }
@@ -178,13 +181,13 @@ void registerNewReading(){
     if (send(buffer)){
       ledOK();
       sprintf(buffer, "Sent %d:%d", now, value);
-      logger,log(buffer);
+      app->log(buffer);
     }
     else{
       ledError();
       writeReading(now, value);
       sprintf(buffer, "Locally stored %d:%d", now, value);
-      logger.log(buffer);
+      app->log(buffer);
     }
         
   }
@@ -208,7 +211,7 @@ int readSensor(){
     }
 
     //sprintf(buffer, "lectura: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-    //logger.log(buffer);
+    //app->log(buffer);
 
     CS = dataBuffer[0] + dataBuffer[1] + dataBuffer[2];
     if (dataBuffer[3] == CS){
@@ -217,7 +220,7 @@ int readSensor(){
     }
     else{
       sprintf(buffer, "CS Error: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-      logger.log(buffer);
+      app->log(buffer);
       return -1;
     }
    }
@@ -231,7 +234,7 @@ void FlushStoredData(){
   int sent = 0;
   
   if (WiFi.status() != WL_CONNECTED){
-    logger.log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the internet :-/.");
+    app->log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the internet :-/.");
     return;
   }
 
@@ -261,7 +264,7 @@ void FlushStoredData(){
 
       if (!send(buffer)){
         //sprintf(buffer, "[FLUSH_STORED_DATA] Error sending register [%d]", cursor);
-        //logger.log(buffer);
+        //app->log(buffer);
         errors = true;
       }
       else
@@ -269,7 +272,7 @@ void FlushStoredData(){
         ledOK();
         sent ++;
         sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d]", cursor);
-        logger.log(buffer);
+        app->log(buffer);
         // We don't want to write the whole struct to save write cycles
         value = -1;
         EEPROM.put(regAddress + sizeof(reading.timestamp), value);
@@ -283,7 +286,7 @@ void FlushStoredData(){
       sprintf(buffer, "[FLUSH_STORED_DATA] %d records sent [errors]", sent);    
   }
   
-  logger.log(buffer);
+  app->log(buffer);
 
 }
 
@@ -308,10 +311,10 @@ void writeReading(unsigned long in_timestamp, short int in_value){
 
     if (currentReading.value == -1){ // Re-use old register
       sprintf(buffer, "Reused position %d", regAddress);
-      logger.log(buffer);
+      app->log(buffer);
       EEPROM.put(regAddress, newReading);
       if (!EEPROM.commit()) {
-        logger.log("Commit failed on re-use");
+        app->log("Commit failed on re-use");
       }
       break;
     }
@@ -327,7 +330,7 @@ void writeReading(unsigned long in_timestamp, short int in_value){
       counter += 1;
       EEPROM.put(0, counter); 
       if (!EEPROM.commit()) {
-        logger.log("Commit failed on new register");
+        app->log("Commit failed on new register");
       }
   }
   
@@ -367,7 +370,7 @@ void connect(){
     sprintf(IP, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
     
     sprintf(buffer, "Connected to %s with IP %s", ssid, IP);
-    logger.log(buffer);
+    app->log(buffer);
 
     ArduinoOTA.begin();
   }

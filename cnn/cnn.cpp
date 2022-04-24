@@ -11,18 +11,19 @@ Log::Log(const char* ID, const char* server){
 }
 
 void App::imAlive(){
-  Serial.println("I'm alive");
+  this->logger->log("I'm alive!!");
 }
 
 App::App(const char* SSID,
          const char* password,
 	 const char* ID, 
-	 const char* server){
+	 const char* log_server){
     this->ID = ID;
-    this->server = server;
+    this->log_server = log_server;
     this->SSID = SSID;
     this->password = password;
     this->timers = NULL;
+    this->logger = new Log(this->ID, this->log_server);
 
     this->addTimer(&this->t0, APP_TIMER);
 
@@ -108,10 +109,15 @@ void App::initNTP(){
   //logger.log(buffer);
 }
 
+void App::log(char* msg){
+    this->logger->log(msg);
+}
+
 
 void Log::log(char* msg){
     char buffer[100];
     sprintf(buffer, "%s/log/[%s] %s", this->server, this->ID, msg);
+    //Serial.println(buffer);
     String toSend = buffer;
     toSend.replace(" ", "%20");
     send(toSend);
