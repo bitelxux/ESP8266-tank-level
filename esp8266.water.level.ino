@@ -42,7 +42,6 @@ static const uint8_t D10  = 1;
 //Constants
 #define EEPROM_SIZE 4 * 1024 * 1024
 
-#define LED 2
 #define LED_BLUE 0
 #define LED_RED 4
 
@@ -75,8 +74,6 @@ const char* log_server = "http://192.168.1.162:8888";
 const char* baseURL = "http://192.168.1.162:8889/";
 
 unsigned int address = 0;
-unsigned int tConnect = millis();
-unsigned long tLastConnectionAttempt = 0;
 unsigned long tBoot = millis();
 
 App* app;
@@ -97,7 +94,6 @@ int counter = 0; // number of registers in EEPROM
 //};
 
 Timer TIMERS[] = {
-  {5000, connectIfNeeded, "connectIfNeeded"},
   {1000, handleOTA, "handleOTA" },
   {1000, blinkLed, "blinkLed" },
 };
@@ -336,71 +332,9 @@ void writeReading(unsigned long in_timestamp, short int in_value){
   
 }
 
-void connect(){
-
-  char buffer[100];
-  
-  Serial.println("");
-  Serial.println("Connecting");
-
-  WiFi.begin(ssid, password);
-
-  tLastConnectionAttempt = millis();
-  tConnect =  millis();
-  while(WiFi.status() != WL_CONNECTED) {
-    digitalWrite(LED, !digitalRead(LED));
-    delay(100);
-    if ((millis() - tConnect) > 500){
-      Serial.print(".");
-      tConnect = millis();
-    }
-
-    // If it doesn't connect, let the thing continue
-    // in the case that in a previous connection epochTime was
-    // initizalized, it will store readings for future send
-    if (millis() - tLastConnectionAttempt >= 30000L){      
-      break;
-    }    
-  }
-
-  Serial.println("");
-
-  if (WiFi.status() == WL_CONNECTED) { 
-    IPAddress ip = WiFi.localIP();
-    sprintf(IP, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-    
-    sprintf(buffer, "Connected to %s with IP %s", ssid, IP);
-    app->log(buffer);
-
-    ArduinoOTA.begin();
-  }
-  else
-  {
-    Serial.println("Failed to connect");
-  }
-
-  tLastConnectionAttempt = millis();
-  
-}
 
 void blinkLed(){
   digitalWrite(LED, !digitalRead(LED));
-}
-
-void connectIfNeeded(){
-  // If millis() < 30000L is the first boot so it will try to connect
-  // for further attempts it will try with spaces of 60 seconds
-
-  if (WiFi.status() != WL_CONNECTED && (millis() < 30000L || millis() - tLastConnectionAttempt > 60000L)){
-    Serial.println("Trying to connect");
-    connect();
-  }  
-
-  // also if we don't have time, try to update
-  if (!app->epochTime){
-    Serial.println("NTP time not updated. Trying to");
-    app->initNTP();
-  }
 }
 
 void loop() {

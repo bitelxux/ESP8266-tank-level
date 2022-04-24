@@ -18,6 +18,7 @@ unsigned short int readEEPROMCounter();
 void initNTP();
 class App;
 
+#define LED 2
 #define USER_TIMER 0
 #define APP_TIMER 1
 
@@ -58,10 +59,14 @@ class App{
         const char* log_server;
         const char* SSID;
         const char* password;
+	char IP[16];
 	unsigned long epochTime = 0;
+	unsigned long tLastConnectionAttempt = 0;
+	unsigned long tConnect = 0;
 
 	TimerNode* timers = NULL;
 	AppTimer t0 {1000, &App::imAlive, "imAlive"};
+	AppTimer t1 {5000, &App::connectIfNeeded, "connectIfNeeded"};
 
 	Log* logger;
 
@@ -76,6 +81,8 @@ class App{
 	void attendAppTimer(TimerNode* timerNode);
 	void imAlive();
 	void log(char* msg);
+	void connectIfNeeded();
+	void connect();
 };
 
 
