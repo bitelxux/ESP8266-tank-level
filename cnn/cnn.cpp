@@ -10,6 +10,10 @@ Log::Log(const char* ID, const char* server){
     this->server = server;
 }
 
+void App::imAlive(){
+  Serial.println("I'm alive");
+}
+
 App::App(const char* SSID,
          const char* password,
 	 const char* ID, 
@@ -19,15 +23,12 @@ App::App(const char* SSID,
     this->SSID = SSID;
     this->password = password;
     this->timers = NULL;
-    //this->logger = Log::Log(ID, server);
-}
 
-void App::imAlive(){
-   int a = 4;
+    this->addTimer(&this->t0);
+
 }
 
 void App::addTimer(Timer* timer){
-
     TimerNode* pointer = this->timers;
 
     TimerNode* newTimerNode = new TimerNode();
@@ -57,9 +58,14 @@ void App::attendTimers(){
 	    return;
     }
 
+    Serial.println("This is attend timers");
+
     while (timerNode != NULL){
+        Serial.println("There's a timer!");
         if (millis() - timerNode->lastRun >= timerNode->timer->millis){
-            timerNode->timer->function();
+            Serial.println("Running timer");
+            // timerNode->timer->function;
+	    (*this.*timerNode->timer->function)();
             timerNode->lastRun =  millis();
 	}
         timerNode = timerNode->next;

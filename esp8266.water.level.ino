@@ -66,7 +66,6 @@ void blinkLed();
 void fakeWrite();
 void connectIfNeeded();
 void handleOTA();
-void imAlive();
 
 #define ID "tank.level"
 
@@ -98,11 +97,13 @@ int counter = 0; // number of registers in EEPROM
 //  { true, 5*1000, 0, &connectIfNeeded, "connectIfNeeded" },  
 //};
 
+/*
 Timer TIMERS[] = {
   {5000, connectIfNeeded, "connectIfNeeded"},
   {1000, handleOTA, "handleOTA" },
   {1000, blinkLed, "blinkLed" },
 };
+*/
 
 typedef struct
 {
@@ -110,12 +111,15 @@ typedef struct
   short int value;
 } Reading;
 
+/*
 void addTimers(){
+  return;
   byte NUM_TIMERS = (sizeof(TIMERS) / sizeof(TIMERS[0]));
   for (int i=0; i<NUM_TIMERS; i++){
     app->addTimer(&TIMERS[i]);  
   }
 }
+*/
 
 void setup() {
   pinMode(LED, OUTPUT);
@@ -136,7 +140,7 @@ void setup() {
   sensor.begin(9600);
 
   app = new App(ssid, password, log_server, ID);
-  addTimers();
+  //addTimers();
 }
 
 
@@ -382,20 +386,7 @@ void connect(){
 }
 
 void blinkLed(){
-  logger.log("This is the led");
   digitalWrite(LED, !digitalRead(LED));
-}
-
-
-void imAlive(){
-  IPAddress ip = WiFi.localIP();
-  char msg[50];
-  static long cont = 0;
-  sprintf(msg, "I'm Alive!! IP: %s [%d]", IP, ++cont);
-  log(msg);
-
-  sprintf(buffer, "size of record: %d", sizeof(Reading));
-  log(buffer);
 }
 
 void connectIfNeeded(){
@@ -416,4 +407,5 @@ void connectIfNeeded(){
 
 void loop() {
   app->attendTimers();
+  delay(1000);
 }

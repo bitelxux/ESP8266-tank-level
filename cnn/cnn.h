@@ -8,10 +8,21 @@
 #include <EEPROM.h> //https://github.com/esp8266/Arduino/blob/master/libraries/EEPROM/EEPROM.h
 #include <NTPClient.h> // install NTPClient from manage libraries
 
+void imAlive();
+void handleOTA();
+void log(char* msg);
+bool send(String what);
+void readEEPROM();
+void resetEEPROM();
+unsigned short int readEEPROMCounter();
+void initNTP();
+class App;
+
 struct Timer
 {
     unsigned long millis;
-    void (*function)();
+    //void (*function)();
+    void (App:: *function)();
     char* functionName;
 };
 
@@ -40,6 +51,7 @@ class App{
 	unsigned long epochTime = 0;
 
 	TimerNode* timers = NULL;
+	Timer t0 {1000, &App::imAlive, "imAlive"};
 
 	//Log logger;
 
@@ -52,14 +64,6 @@ class App{
 	void attendTimers();
 	void imAlive();
 };
-        	
 
-void handleOTA();
-void log(char* msg);
-bool send(String what);
-void readEEPROM();
-void resetEEPROM();
-unsigned short int readEEPROMCounter();
-void initNTP();
 
 #endif
