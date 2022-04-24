@@ -61,6 +61,7 @@ void App::attendUserTimer(TimerNode* timerNode){
     Timer* timer = (Timer*) timerNode->timer;
     if (millis() - timerNode->lastRun >= timer->millis){
         timer->function();
+	timerNode->lastRun = millis();
     }
 }
 
@@ -68,6 +69,7 @@ void App::attendAppTimer(TimerNode* timerNode){
     AppTimer* timer = (AppTimer*) timerNode->timer;
     if (millis() - timerNode->lastRun >= timer->millis){
         (*this.*timer->function)();
+	timerNode->lastRun = millis();
     }
 }
 

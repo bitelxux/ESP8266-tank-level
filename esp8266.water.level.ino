@@ -337,5 +337,4 @@ void blinkLed(){
 
 void loop() {
   app->attendTimers();
-  delay(1000);
 }
