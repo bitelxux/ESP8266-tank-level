@@ -7,3 +7,5 @@ and sending them once the connection is resumed.
 
 HEADS UP!: Server part is WIP. current server.py and server2.py are still
 those from the original project.
+
+Link 'cnn' library to arduino's libraries directory
