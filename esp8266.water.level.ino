@@ -97,13 +97,11 @@ int counter = 0; // number of registers in EEPROM
 //  { true, 5*1000, 0, &connectIfNeeded, "connectIfNeeded" },  
 //};
 
-/*
 Timer TIMERS[] = {
   {5000, connectIfNeeded, "connectIfNeeded"},
   {1000, handleOTA, "handleOTA" },
   {1000, blinkLed, "blinkLed" },
 };
-*/
 
 typedef struct
 {
@@ -111,15 +109,12 @@ typedef struct
   short int value;
 } Reading;
 
-/*
 void addTimers(){
-  return;
   byte NUM_TIMERS = (sizeof(TIMERS) / sizeof(TIMERS[0]));
   for (int i=0; i<NUM_TIMERS; i++){
     app->addTimer(&TIMERS[i]);  
   }
 }
-*/
 
 void setup() {
   pinMode(LED, OUTPUT);

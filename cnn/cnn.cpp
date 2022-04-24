@@ -28,10 +28,13 @@ App::App(const char* SSID,
 
 }
 
-void App::addTimer(void* timer, int type=USER_TIMER){
+void App::addTimer(void* timer, int type){
     TimerNode* pointer = this->timers;
 
     TimerNode* newTimerNode = new TimerNode();
+
+    Serial.print("Add timer of type ");
+    Serial.println(type);
 
     newTimerNode->type = type;
     newTimerNode->lastRun = 0;
@@ -52,12 +55,16 @@ void App::addTimer(void* timer, int type=USER_TIMER){
 }
 
 void App::attendUserTimer(TimerNode* timerNode){
+    AppTimer* timer = (Timer*) timerNode->timer;
+    if (millis() - timerNode->lastRun >= timer->millis){
+        Serial.println("Running user timer");
+        (*this.*timer->function)();
 }
 
 void App::attendAppTimer(TimerNode* timerNode){
     AppTimer* timer = (AppTimer*) timerNode->timer;
     if (millis() - timerNode->lastRun >= timer->millis){
-        Serial.println("Running timer");
+        Serial.println("Running app timer");
         (*this.*timer->function)();
     }
 }
@@ -70,10 +77,7 @@ void App::attendTimers(){
 	    return;
     }
 
-    Serial.println("This is attend timers");
-
     while (timerNode != NULL){
-        Serial.println("There's a timer!");
 
 	if (timerNode->type == USER_TIMER){
     	    this->attendUserTimer(timerNode); 

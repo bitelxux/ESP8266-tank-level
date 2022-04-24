@@ -70,7 +70,7 @@ class App{
 	    const char* ID,
 	    const char* server);
 	void initNTP();
-	void addTimer(void* timer, int type);
+	void addTimer(void* timer, int type = USER_TIMER);
 	void attendTimers();
 	void attendUserTimer(TimerNode* timerNode);
 	void attendAppTimer(TimerNode* timerNode);
