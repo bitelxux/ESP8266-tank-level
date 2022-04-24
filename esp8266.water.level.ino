@@ -1,4 +1,3 @@
-
 /* Testest with
  -  Arduino IDE 1.8.15
     - Arduino AVR board 1.8.3
@@ -8,7 +7,6 @@ https://arduino.esp8266.com/stable/package_esp8266com_index.json
 board: NodeMCU1.0 (ESP-12E Module)
 
 Install NTPClient from manage libraries
-    
 */
 
 //Libraries
@@ -44,7 +42,6 @@ static const uint8_t D10  = 1;
 
 #define LED_BLUE 0
 #define LED_RED 4
-
 #define LED_GREEN 5
 #define TX 14
 #define RX 12
@@ -53,6 +50,7 @@ char buffer[100];
 unsigned char dataBuffer[4] = {0};
 unsigned char CS;
 int distance;
+int counter = 0; // number of registers in EEPROM
 
 char IP[16];
 
@@ -62,8 +60,6 @@ SoftwareSerial sensor(RX, TX);
 void FlushStoredData();
 void registerNewReading();
 void blinkLed();
-void fakeWrite();
-void connectIfNeeded();
 
 #define ID "tank.level"
 
@@ -72,12 +68,7 @@ const char* password = "82111847";
 const char* log_server = "http://192.168.1.162:8888";
 const char* baseURL = "http://192.168.1.162:8889/";
 
-unsigned int address = 0;
-unsigned long tBoot = millis();
-
 App* app;
-
-int counter = 0; // number of registers in EEPROM
 
 Timer TIMERS[] = {
   {1000, blinkLed, "blinkLed" },
@@ -116,11 +107,7 @@ void setup() {
   // sensor
   sensor.begin(9600);
 
-  app = new App(ssid,
-                password,
-                ID,
-                log_server
-                );
+  app = new App(ssid, password, ID, log_server);
   addTimers();
 }
 
