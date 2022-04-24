@@ -27,6 +27,7 @@ App::App(const char* SSID,
 
     this->addTimer(&this->t0, APP_TIMER);
     this->addTimer(&this->t1, APP_TIMER);
+    this->addTimer(&this->t2, APP_TIMER);
 
 }
 
@@ -189,7 +190,7 @@ void Log::log(char* msg){
     send(toSend);
 }
 
-void handleOTA(){
+void App::handleOTA(){
   ArduinoOTA.handle();
 }
 

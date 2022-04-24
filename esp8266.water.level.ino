@@ -64,7 +64,6 @@ void registerNewReading();
 void blinkLed();
 void fakeWrite();
 void connectIfNeeded();
-void handleOTA();
 
 #define ID "tank.level"
 
@@ -94,7 +93,6 @@ int counter = 0; // number of registers in EEPROM
 //};
 
 Timer TIMERS[] = {
-  {1000, handleOTA, "handleOTA" },
   {1000, blinkLed, "blinkLed" },
 };
 
