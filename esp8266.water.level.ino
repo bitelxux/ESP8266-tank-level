@@ -77,18 +77,7 @@ unsigned long tBoot = millis();
 
 App* app;
 
-// Define NTP Client to get time
-//WiFiUDP ntpUDP;
-//NTPClient timeClient(ntpUDP, "pool.ntp.org");
-
 int counter = 0; // number of registers in EEPROM
-
-//Timer TIMERS[] = {
-//  { true, 30*1000, 0, &FlushStoredData, "FlushStoredData" },
-//  { true, 1*1000, 0, &registerNewReading, "registerNewReading" },  
-//  { true, 1*1000, 0, &blinkLed, "blinkLed" },  
-//  { true, 5*1000, 0, &connectIfNeeded, "connectIfNeeded" },  
-//};
 
 Timer TIMERS[] = {
   {1000, blinkLed, "blinkLed" },
