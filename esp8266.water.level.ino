@@ -5,37 +5,15 @@
 
 https://arduino.esp8266.com/stable/package_esp8266com_index.json
 board: NodeMCU1.0 (ESP-12E Module)
-
-Install NTPClient from manage libraries
 */
 
 //Libraries
-
-#include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>
-#include <SoftwareSerial.h>
-
 #include <cnn.h>
+#include <SoftwareSerial.h>
 
 // This is for each variable to use it's real size when stored
 // in the EEPROM
 #pragma pack(push, 1)
-
-// pins mapping
-
-/*
-static const uint8_t D0   = 16;
-static const uint8_t D1   = 5;
-static const uint8_t D2   = 4;
-static const uint8_t D3   = 0;
-static const uint8_t D4   = 2;
-static const uint8_t D5   = 14;
-static const uint8_t D6   = 12;
-static const uint8_t D7   = 13;
-static const uint8_t D8   = 15;x``
-static const uint8_t D9   = 3;
-static const uint8_t D10  = 1;
-*/
 
 //Constants
 #define EEPROM_SIZE 4 * 1024 * 1024
@@ -51,8 +29,6 @@ unsigned char dataBuffer[4] = {0};
 unsigned char CS;
 int distance;
 int counter = 0; // number of registers in EEPROM
-
-char IP[16];
 
 SoftwareSerial sensor(RX, TX);
 
