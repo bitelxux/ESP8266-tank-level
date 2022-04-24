@@ -24,15 +24,16 @@ App::App(const char* SSID,
     this->password = password;
     this->timers = NULL;
 
-    this->addTimer(&this->t0);
+    this->addTimer(&this->t0, APP_TIMER);
 
 }
 
-void App::addTimer(Timer* timer){
+void App::addTimer(void* timer, int type=USER_TIMER){
     TimerNode* pointer = this->timers;
 
     TimerNode* newTimerNode = new TimerNode();
 
+    newTimerNode->type = type;
     newTimerNode->lastRun = 0;
     newTimerNode->timer = timer;
     newTimerNode->next = NULL;
@@ -50,6 +51,17 @@ void App::addTimer(Timer* timer){
     pointer->next = newTimerNode;
 }
 
+void App::attendUserTimer(TimerNode* timerNode){
+}
+
+void App::attendAppTimer(TimerNode* timerNode){
+    AppTimer* timer = (AppTimer*) timerNode->timer;
+    if (millis() - timerNode->lastRun >= timer->millis){
+        Serial.println("Running timer");
+        (*this.*timer->function)();
+    }
+}
+
 void App::attendTimers(){
 
     TimerNode* timerNode = this->timers;
@@ -62,12 +74,15 @@ void App::attendTimers(){
 
     while (timerNode != NULL){
         Serial.println("There's a timer!");
-        if (millis() - timerNode->lastRun >= timerNode->timer->millis){
-            Serial.println("Running timer");
-            // timerNode->timer->function;
-	    (*this.*timerNode->timer->function)();
-            timerNode->lastRun =  millis();
-	}
+
+	if (timerNode->type == USER_TIMER){
+    	    this->attendUserTimer(timerNode); 
+        }
+
+	if (timerNode->type == APP_TIMER){
+    	    this->attendAppTimer(timerNode); 
+        }
+
         timerNode = timerNode->next;
     }
 }

@@ -18,18 +18,28 @@ unsigned short int readEEPROMCounter();
 void initNTP();
 class App;
 
+#define USER_TIMER 0
+#define APP_TIMER 1
+
 struct Timer
 {
     unsigned long millis;
-    //void (*function)();
+    void (*function)();
+    char* functionName;
+};
+
+struct AppTimer
+{
+    unsigned long millis;
     void (App:: *function)();
     char* functionName;
 };
 
 struct TimerNode
 {
+    int type; 
     unsigned long lastRun;
-    Timer* timer;
+    void* timer;
     TimerNode* next;
 };
 
@@ -51,7 +61,7 @@ class App{
 	unsigned long epochTime = 0;
 
 	TimerNode* timers = NULL;
-	Timer t0 {1000, &App::imAlive, "imAlive"};
+	AppTimer t0 {1000, &App::imAlive, "imAlive"};
 
 	//Log logger;
 
@@ -60,8 +70,10 @@ class App{
 	    const char* ID,
 	    const char* server);
 	void initNTP();
-	void addTimer(Timer* timer);
+	void addTimer(void* timer, int type);
 	void attendTimers();
+	void attendUserTimer(TimerNode* timerNode);
+	void attendAppTimer(TimerNode* timerNode);
 	void imAlive();
 };
 
