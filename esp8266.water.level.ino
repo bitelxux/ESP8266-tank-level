@@ -43,10 +43,6 @@ const char* password = "82111847";
 const char* log_server = "http://192.168.1.162:8888";
 const char* baseURL = "http://192.168.1.162:8889/";
 
-Timer TIMERS[] = {
-  {30000, FlushStoredData, "FlushStoredData" },
-  {1000, registerNewReading, "registerNewReading" },  
-};
 
 typedef struct
 {
@@ -56,32 +52,6 @@ typedef struct
 
 App app = App(ssid, password, ID, log_server);
 
-void addTimers(){
-  byte NUM_TIMERS = (sizeof(TIMERS) / sizeof(TIMERS[0]));
-  for (int i=0; i<NUM_TIMERS; i++){
-    app.addTimer(&TIMERS[i]);
-  }
-}
-
-void setup() {
-  pinMode(LED_BLUE, OUTPUT);
-  pinMode(LED_RED, OUTPUT);
-  pinMode(LED_GREEN, OUTPUT);
-
-  digitalWrite(LED_BLUE, LOW);
-  digitalWrite(LED_RED, LOW);
-  digitalWrite(LED_GREEN, LOW);
-  
-  Serial.begin(115200); 
-  EEPROM.begin(EEPROM_SIZE);
-  
-  // resetEEPROM();
-  
-  // sensor
-  sensor.begin(9600);
-
-  addTimers();
-}
 
 
 void ledError(){
@@ -278,6 +248,25 @@ void writeReading(unsigned long in_timestamp, short int in_value){
   
 }
 
+void setup() {
+  pinMode(LED_BLUE, OUTPUT);
+  pinMode(LED_RED, OUTPUT);
+  pinMode(LED_GREEN, OUTPUT);
+
+  digitalWrite(LED_BLUE, LOW);
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(LED_GREEN, LOW);
+  
+  Serial.begin(115200); 
+  EEPROM.begin(EEPROM_SIZE);
+  
+  // resetEEPROM();
+  
+  sensor.begin(9600);
+
+  app.addTimer(30000, FlushStoredData, "FlushStoredData");
+  app.addTimer(1000, registerNewReading, "registerNewReading");
+}
 
 void loop() {
   app.attendTimers();

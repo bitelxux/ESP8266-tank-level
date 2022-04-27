@@ -5,6 +5,9 @@
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
+Timer::Timer(){
+}
+
 Log::Log(const char* ID, const char* server){
     this->ID = ID;
     this->server = server;
@@ -27,10 +30,10 @@ App::App(const char* SSID,
     this->timers = NULL;
     this->logger = new Log(this->ID, this->log_server);
 
-    this->addTimer(&this->t0, APP_TIMER);
-    this->addTimer(&this->t1, APP_TIMER);
-    this->addTimer(&this->t2, APP_TIMER);
-    this->addTimer(&this->t3, APP_TIMER);
+    this->addTimer(60000, &App::imAlive, "imAlive");
+    this->addTimer(5000, &App::connectIfNeeded, "connectIfNeeded");
+    this->addTimer(1000, &App::handleOTA, "handleOTA");
+    this->addTimer(1000, &App::blinkLED, "blinkLED");
 
     pinMode(LED, OUTPUT);
 
@@ -40,68 +43,77 @@ void App::blinkLED(){
      digitalWrite(this->LED, !digitalRead(this->LED));
 }
 
-void App::addTimer(void* timer, int type){
-    TimerNode* pointer = this->timers;
+void App::addTimer(int millis, AppCallback function, char*name){
 
-    TimerNode* newTimerNode = new TimerNode();
+	Timer* newTimer = new Timer();
 
-    Serial.print("Add timer of type ");
-    Serial.println(type);
+	newTimer->type = APP_TIMER;
+	newTimer->millis = millis;
+	newTimer->appFunction = function;
+	newTimer->name = name;
+	newTimer->lastRun = 0;
+	newTimer->next = NULL;
 
-    newTimerNode->type = type;
-    newTimerNode->lastRun = 0;
-    newTimerNode->timer = timer;
-    newTimerNode->next = NULL;
+	Timer* timer = this->timers;
+	if(!timer){
+	    this->timers = newTimer;
+	    return;
+	}
 
+	while(timer->next){
+            timer = timer->next;
+	}
 
-    if (pointer == NULL){
-       this->timers = newTimerNode;
-       return;
-    }
-
-    while (pointer->next != NULL){
-        pointer = pointer->next;
-    }
-
-    pointer->next = newTimerNode;
+	timer->next = newTimer;
 }
 
-void App::attendUserTimer(TimerNode* timerNode){
-    Timer* timer = (Timer*) timerNode->timer;
-    if (millis() - timerNode->lastRun >= timer->millis){
-        timer->function();
-	timerNode->lastRun = millis();
-    }
+void App::addTimer(int millis, function_callback function, char*name){
+
+	Timer* newTimer = new Timer();
+
+	newTimer->type = USER_TIMER;
+	newTimer->millis = millis;
+	newTimer->function = function;
+	newTimer->name = name;
+	newTimer->lastRun = 0;
+	newTimer->next = NULL;
+
+	Timer* timer = this->timers;
+	if(!timer){
+	    this->timers = newTimer;
+	    return;
+	}
+
+	while(timer->next){
+            timer = timer->next;
+	}
+
+	timer->next = newTimer;
 }
 
-void App::attendAppTimer(TimerNode* timerNode){
-    AppTimer* timer = (AppTimer*) timerNode->timer;
-    if (millis() - timerNode->lastRun >= timer->millis){
-        (*this.*timer->function)();
-	timerNode->lastRun = millis();
-    }
-}
 
 void App::attendTimers(){
 
-    TimerNode* timerNode = this->timers;
+    Timer* timer = this->timers;
 
-    if (!timerNode){
+    if (!timer){
 	    return;
     }
 
-    while (timerNode != NULL){
+    while (timer != NULL){
 
+        if (millis() - timer->lastRun > timer->millis){
+	    if (timer->type == USER_TIMER){
+    	       timer->function();
+            }
 
-	if (timerNode->type == USER_TIMER){
-    	    this->attendUserTimer(timerNode); 
+	    if (timer->type == APP_TIMER){
+    	       (*this.*timer->appFunction)();
+            }
+	    timer->lastRun = millis();
         }
 
-	if (timerNode->type == APP_TIMER){
-    	    this->attendAppTimer(timerNode); 
-        }
-
-        timerNode = timerNode->next;
+        timer = timer->next;
     }
 }
 
@@ -189,7 +201,6 @@ void App::connect(){
   this->tLastConnectionAttempt = millis();
   
 }
-
 
 
 void Log::log(char* msg){

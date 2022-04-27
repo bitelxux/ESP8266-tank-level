@@ -17,10 +17,11 @@ static const uint8_t D4   = 2;
 static const uint8_t D5   = 14;
 static const uint8_t D6   = 12;
 static const uint8_t D7   = 13;
-static const uint8_t D8   = 15;x``
+static const uint8_t D8   = 15;
 static const uint8_t D9   = 3;
 static const uint8_t D10  = 1;
 */
+
 
 void imAlive();
 void handleOTA();
@@ -32,29 +33,23 @@ unsigned short int readEEPROMCounter();
 void initNTP();
 class App;
 
+typedef void (*function_callback)();
+typedef void (App::*AppCallback)();
+
 #define USER_TIMER 0
 #define APP_TIMER 1
 
-struct Timer
-{
-    unsigned long millis;
-    void (*function)();
-    char* functionName;
-};
+class Timer{
+    public:
+	int millis;
+	AppCallback appFunction;
+	function_callback  function;
+	char* name;
+	int type;
+	unsigned long lastRun;
+	Timer* next;
 
-struct AppTimer
-{
-    unsigned long millis;
-    void (App:: *function)();
-    char* functionName;
-};
-
-struct TimerNode
-{
-    int type; 
-    unsigned long lastRun;
-    void* timer;
-    TimerNode* next;
+	Timer();
 };
 
 class Log{
@@ -78,11 +73,7 @@ class App{
 	unsigned long tLastConnectionAttempt = 0;
 	unsigned long tConnect = 0;
 
-	TimerNode* timers = NULL;
-	AppTimer t0 {30000, &App::imAlive, "imAlive"};
-	AppTimer t1 {5000, &App::connectIfNeeded, "connectIfNeeded"};
-	AppTimer t2 {1000, &App::handleOTA, "handleOTA"};
-	AppTimer t3 {1000, &App::blinkLED, "blinkLED"};
+	Timer* timers = NULL;
 
 	Log* logger;
 
@@ -92,10 +83,9 @@ class App{
 	    const char* server);
 
 	void initNTP();
-	void addTimer(void* timer, int type = USER_TIMER);
+	void addTimer(int millis, AppCallback function, char* name);
+	void addTimer(int millis, function_callback function, char* name);
 	void attendTimers();
-	void attendUserTimer(TimerNode* timerNode);
-	void attendAppTimer(TimerNode* timerNode);
 	void imAlive();
 	void log(char* msg);
 	void connectIfNeeded();
