@@ -22,15 +22,6 @@ static const uint8_t D9   = 3;
 static const uint8_t D10  = 1;
 */
 
-
-void imAlive();
-void handleOTA();
-void log(char* msg);
-bool send(String what);
-void readEEPROM();
-void resetEEPROM();
-unsigned short int readEEPROMCounter();
-void initNTP();
 class App;
 
 typedef void (*function_callback)();
@@ -54,10 +45,11 @@ class Timer{
 
 class Log{
     public:
+	    App* app;
         const char* server;
         const char* ID;
 
-        Log(const char* ID, const char* server);
+        Log(App* app, const char* ID, const char* server);
         void log(char* msg);
 };
 
@@ -88,6 +80,7 @@ class App{
 	void attendTimers();
 	void imAlive();
 	void log(char* msg);
+	bool send(String what);
 	void connectIfNeeded();
 	void connect();
 	void handleOTA();

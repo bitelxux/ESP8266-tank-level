@@ -90,7 +90,7 @@ void registerNewReading(){
 
     // try to send to the server
     // if fails, store locally for further retrying
-    if (send(buffer)){
+    if (app.send(buffer)){
       ledOK();
       sprintf(buffer, "Sent %d:%d", now, value);
       app.log(buffer);
@@ -174,7 +174,7 @@ void FlushStoredData(){
       
       sprintf(buffer, "%s/add/%d:%d", baseURL, reading.timestamp, reading.value);
 
-      if (!send(buffer)){
+      if (!app.send(buffer)){
         //sprintf(buffer, "[FLUSH_STORED_DATA] Error sending register [%d]", cursor);
         //app.log(buffer);
         errors = true;
@@ -247,6 +247,43 @@ void writeReading(unsigned long in_timestamp, short int in_value){
   }
   
 }
+
+void readEEPROM(int regSize){
+
+  unsigned short int counter = readEEPROMCounter();
+  unsigned short int cursor = 0;
+  int regAddress;
+  char buffer[100];
+
+  sprintf(buffer, "%d registers currently stored in EEPROM", counter);
+  app.log(buffer);
+
+  /*
+  for (cursor = 0; cursor < counter; cursor++){
+    regAddress = 2 + cursor*regSize; // +2 is to skip the counter bytes
+    EEPROM.get(regAddress, reading);
+    sprintf(buffer, "Address %d: %d:%d", regAddress, reading.timestamp, reading.value);
+    log(buffer);
+  }
+  */
+
+}
+
+void resetEEPROM(){
+
+  int address = 0;
+  unsigned short int counter=0;
+  EEPROM.put(address, counter);
+  EEPROM.commit();
+  int a = 1/0; // I don't want to continue
+}
+
+unsigned short int readEEPROMCounter(){
+  unsigned short int counter;
+  EEPROM.get(0, counter);
+  return counter;
+}
+
 
 void setup() {
   pinMode(LED_BLUE, OUTPUT);
