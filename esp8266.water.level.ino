@@ -284,8 +284,7 @@ unsigned short int readEEPROMCounter(){
   return counter;
 }
 
-
-void setup() {
+void setupLeds(){
   pinMode(LED_BLUE, OUTPUT);
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_GREEN, OUTPUT);
@@ -293,12 +292,14 @@ void setup() {
   digitalWrite(LED_BLUE, LOW);
   digitalWrite(LED_RED, LOW);
   digitalWrite(LED_GREEN, LOW);
-  
+}
+
+void setup() {
+  setupLeds();
+
   Serial.begin(115200); 
   EEPROM.begin(EEPROM_SIZE);
-  
   // resetEEPROM();
-  
   sensor.begin(9600);
 
   app.addTimer(30000, FlushStoredData, "FlushStoredData");
