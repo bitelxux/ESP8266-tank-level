@@ -123,6 +123,12 @@ void registerNewReading(){
   int distance;
   char buffer[100];
 
+  // purge some possible noise
+  for (int i=0; i<10; i++){
+    readSensor();
+    delay(50);
+  }
+
   distance = readSensor();
 
   if (distance == -1){
@@ -378,8 +384,8 @@ void setup() {
   // resetEEPROM();
   sensor.begin(9600);
 
-  app.addTimer(30000, FlushStoredData, "FlushStoredData");
-  app.addTimer(1000, registerNewReading, "registerNewReading");
+  app.addTimer(120 * 1000, FlushStoredData, "FlushStoredData");
+  app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
 }
 
 void loop() {
