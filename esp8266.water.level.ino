@@ -69,6 +69,20 @@ typedef struct
 
 App app = App(ssid, password, ID, log_server);
 
+int calcLitres(short int distance){
+
+    float fd = distance/1000.0; // meters
+    float h = max((float)0.0, TANK_EMPTY_DISTANCE - fd);
+    float v = piR2 * h * 1000;
+
+    // There is some remaining water under the floating switch
+    // that is not usable because the pumb is off at this level.
+    // Yet, it is water in the tank
+    v += piR2 * REMAINING_WATER_HEIGHT * 1000;
+
+    return (int) v;
+}
+
 void appendToBuffer(short int value)
 {
   *circularBufferAccessor = value;
@@ -119,19 +133,21 @@ void registerNewReading(){
 
   if (app.epochTime){
     unsigned long now = app.epochTime + int(millis()/1000);
-    sprintf(buffer, "%s/add/%d:%d", baseURL, now, distance);
+
+    int litres = calcLitres(distance);
+    sprintf(buffer, "%s/add/%d:%d", baseURL, now, litres);
 
     // try to send to the server
     // if fails, store locally for further retrying
     if (app.send(buffer)){
       ledOK();
-      sprintf(buffer, "Sent %d:%d", now, distance);
+      sprintf(buffer, "Sent %d:%d", now, litres);
       app.log(buffer);
     }
     else{
       ledError();
       writeReading(now, distance);
-      sprintf(buffer, "Locally stored %d:%d", now, distance);
+      sprintf(buffer, "Locally stored %d:%d", now, litres);
       app.log(buffer);
     }
         
@@ -139,10 +155,6 @@ void registerNewReading(){
 
 }
 
-
-short int mmToLitres(int milimetres){
-  return milimetres;
-}
 
 // returns the mobile average of current reading
 int readSensor(){
