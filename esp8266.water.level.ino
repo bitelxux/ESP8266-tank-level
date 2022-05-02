@@ -43,6 +43,24 @@ const char* password = "82111847";
 const char* log_server = "http://192.168.1.162:8888";
 const char* baseURL = "http://192.168.1.162:8889/";
 
+// all distances in meters
+float TANK_RADIUS = 0.6;
+float TANK_EMPTY_DISTANCE = 1.170;
+float TANK_FULL_DISTANCE= 0.21;
+float REMAINING_WATER_HEIGHT= 0.19;
+
+// circular buffer
+int sum = 0;
+int elementCount = 0;
+const int windowSize = 5;
+int circularBuffer[windowSize];
+int* circularBufferAccessor = circularBuffer;
+
+// pre-calculated
+float piR2=3.141516*TANK_RADIUS*TANK_RADIUS;
+
+int previous_distance = 0;
+
 typedef struct
 {
   unsigned long timestamp;
@@ -50,6 +68,24 @@ typedef struct
 } Reading;
 
 App app = App(ssid, password, ID, log_server);
+
+void appendToBuffer(short int value)
+{
+  *circularBufferAccessor = value;
+  circularBufferAccessor++;
+  if (circularBufferAccessor >= circularBuffer + windowSize) 
+    circularBufferAccessor = circularBuffer;
+}
+
+int mobileAverage(int value)
+{
+  sum -= *circularBufferAccessor;
+  sum += value;
+  appendToBuffer(value);
+  if (elementCount < windowSize)
+    ++elementCount;
+  return (int) sum / elementCount;
+}
 
 bool isServerAlive(){
     sprintf(buffer, "%s/ping", baseURL);
@@ -70,18 +106,12 @@ void ledOK(){
 }
 
 void registerNewReading(){
-  short int value;
+  int distance;
   char buffer[100];
 
-  // Flush old readings from sensor
-  while (sensor.available()){
-    delay(5);
-    sensor.read();
-  }
-  delay(20);
+  distance = readSensor();
 
-  value = readSensor();
-  if (value == -1){
+  if (distance == -1){
     app.log("Error reading value from sensor");
     ledError();
     return;
@@ -89,19 +119,19 @@ void registerNewReading(){
 
   if (app.epochTime){
     unsigned long now = app.epochTime + int(millis()/1000);
-    sprintf(buffer, "%s/add/%d:%d", baseURL, now, value);
+    sprintf(buffer, "%s/add/%d:%d", baseURL, now, distance);
 
     // try to send to the server
     // if fails, store locally for further retrying
     if (app.send(buffer)){
       ledOK();
-      sprintf(buffer, "Sent %d:%d", now, value);
+      sprintf(buffer, "Sent %d:%d", now, distance);
       app.log(buffer);
     }
     else{
       ledError();
-      writeReading(now, value);
-      sprintf(buffer, "Locally stored %d:%d", now, value);
+      writeReading(now, distance);
+      sprintf(buffer, "Locally stored %d:%d", now, distance);
       app.log(buffer);
     }
         
@@ -114,32 +144,43 @@ short int mmToLitres(int milimetres){
   return milimetres;
 }
 
+// returns the mobile average of current reading
 int readSensor(){
-   if (sensor.available() > 0){
-    delay(4);
 
-    if (sensor.read() == 0xFF){
-      dataBuffer[0] = 0xFF;
-      for (int i=1; i<4; i++){
-        dataBuffer[i] = sensor.read();
-      }
-    }
+   short int distance = 0;
 
-    //sprintf(buffer, "lectura: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-    //app.log(buffer);
-
-    CS = dataBuffer[0] + dataBuffer[1] + dataBuffer[2];
-    if (dataBuffer[3] == CS){
-      distance = (dataBuffer[1] << 8) + dataBuffer[2];
-      return distance;
-    }
-    else{
-      sprintf(buffer, "CS Error: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-      app.log(buffer);
-      return -1;
-    }
+   // Flush old readings from sensor
+   while (sensor.available()){
+     delay(5);
+     sensor.read();
    }
-     
+   delay(20);
+
+   if (sensor.available() > 0){
+       delay(4);
+    
+       if (sensor.read() == 0xFF){
+          dataBuffer[0] = 0xFF;
+          for (int i=1; i<4; i++){
+            dataBuffer[i] = sensor.read();
+          }
+       }
+    
+       //sprintf(buffer, "lectura: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
+       //app.log(buffer);
+    
+       CS = dataBuffer[0] + dataBuffer[1] + dataBuffer[2];
+    
+       if (dataBuffer[3] == CS){
+         distance = (dataBuffer[1] << 8) + dataBuffer[2];
+         return mobileAverage(distance);
+       }
+       else{
+         sprintf(buffer, "CS Error: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
+         app.log(buffer);
+         return -1;
+       }
+   }
 }
 
 void FlushStoredData(){
