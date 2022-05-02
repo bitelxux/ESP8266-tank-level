@@ -43,7 +43,6 @@ const char* password = "82111847";
 const char* log_server = "http://192.168.1.162:8888";
 const char* baseURL = "http://192.168.1.162:8889/";
 
-
 typedef struct
 {
   unsigned long timestamp;
@@ -52,7 +51,11 @@ typedef struct
 
 App app = App(ssid, password, ID, log_server);
 
-
+bool isServerAlive(){
+    sprintf(buffer, "%s/ping", baseURL);
+    Serial.println(buffer);
+    return (app.send(buffer));
+}
 
 void ledError(){
     digitalWrite(LED_RED, HIGH);
@@ -140,6 +143,12 @@ int readSensor(){
 }
 
 void FlushStoredData(){
+
+  if (!isServerAlive()){
+    sprintf(buffer, "[FLUSH_STORED_DATA] Server doesn't respond. Skipping");
+    app.log(buffer);
+    return;
+  }
 
   // send will be done in batches to allow other tasks to run
   unsigned short batch = 100;
