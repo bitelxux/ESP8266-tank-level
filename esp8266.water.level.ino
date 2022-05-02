@@ -151,7 +151,7 @@ void FlushStoredData(){
   }
 
   // send will be done in batches to allow other tasks to run
-  unsigned short batch = 100;
+  unsigned short batch = 50;
 
   // You have to start server.py at BASE_URL
   int sent = 0;
