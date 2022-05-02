@@ -139,8 +139,10 @@ int readSensor(){
      
 }
 
-
 void FlushStoredData(){
+
+  // send will be done in batches to allow other tasks to run
+  unsigned short batch = 100;
 
   // You have to start server.py at BASE_URL
   int sent = 0;
@@ -164,6 +166,11 @@ void FlushStoredData(){
   //Serial.println(buffer);
   
   for (cursor = 0; cursor < counter; cursor++){
+
+      if (sent >= batch){
+         break;
+      }
+
       regAddress = 2 + cursor*regSize; // +2 is to skip the counter bytes
       EEPROM.get(regAddress, reading);
 
@@ -194,12 +201,22 @@ void FlushStoredData(){
 
   if (!errors){
       sprintf(buffer, "[FLUSH_STORED_DATA] %d records sent", sent);
+      if (sent == 0){
+          writeCounter(0);
+      }
   } else {
       sprintf(buffer, "[FLUSH_STORED_DATA] %d records sent [errors]", sent);    
   }
   
   app.log(buffer);
 
+}
+
+void writeCounter(unsigned short int value){
+  EEPROM.put(0, value); 
+  if (!EEPROM.commit()) {
+    app.log("Commit failed writing counter");
+  }
 }
 
 void writeReading(unsigned long in_timestamp, short int in_value){
@@ -240,10 +257,7 @@ void writeReading(unsigned long in_timestamp, short int in_value){
 
       EEPROM.put(regAddress, newReading);
       counter += 1;
-      EEPROM.put(0, counter); 
-      if (!EEPROM.commit()) {
-        app.log("Commit failed on new register");
-      }
+      writeCounter(counter);
   }
   
 }
