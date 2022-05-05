@@ -18,9 +18,6 @@ board: NodeMCU1.0 (ESP-12E Module)
 //Constants
 #define EEPROM_SIZE 4 * 1024 * 1024
 
-#define LED_BLUE 0
-#define LED_RED 4
-#define LED_GREEN 5
 #define TX 14
 #define RX 12
 
@@ -41,7 +38,7 @@ void registerNewReading();
 const char* ssid = "Starlink";
 const char* password = "82111847";
 const char* log_server = "http://192.168.1.162:8888";
-const char* baseURL = "http://192.168.1.162:8889/";
+const char* baseURL = "http://192.168.1.162:8889";
 
 // all distances in meters
 float TANK_RADIUS = 0.6;
@@ -107,18 +104,6 @@ bool isServerAlive(){
     return (app.send(buffer));
 }
 
-void ledError(){
-    digitalWrite(LED_RED, HIGH);
-    delay(20);
-    digitalWrite(LED_RED, LOW);  
-}
-
-void ledOK(){
-    digitalWrite(LED_GREEN, HIGH);
-    delay(20);
-    digitalWrite(LED_GREEN, LOW);  
-}
-
 void registerNewReading(){
   int distance;
   char buffer[100];
@@ -133,7 +118,6 @@ void registerNewReading(){
 
   if (distance == -1){
     app.log("Error reading value from sensor");
-    ledError();
     return;
   }
 
@@ -146,12 +130,10 @@ void registerNewReading(){
     // try to send to the server
     // if fails, store locally for further retrying
     if (app.send(buffer)){
-      ledOK();
       sprintf(buffer, "Sent %d:%d", now, litres);
       app.log(buffer);
     }
     else{
-      ledError();
       writeReading(now, distance);
       sprintf(buffer, "Locally stored %d:%d", now, litres);
       app.log(buffer);
@@ -256,7 +238,6 @@ void FlushStoredData(){
       }
       else
       {
-        ledOK();
         sent ++;
         sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d]", cursor);
         app.log(buffer);
@@ -366,19 +347,7 @@ unsigned short int readEEPROMCounter(){
   return counter;
 }
 
-void setupLeds(){
-  pinMode(LED_BLUE, OUTPUT);
-  pinMode(LED_RED, OUTPUT);
-  pinMode(LED_GREEN, OUTPUT);
-
-  digitalWrite(LED_BLUE, LOW);
-  digitalWrite(LED_RED, LOW);
-  digitalWrite(LED_GREEN, LOW);
-}
-
 void setup() {
-  setupLeds();
-
   Serial.begin(115200); 
   EEPROM.begin(EEPROM_SIZE);
   // resetEEPROM();
