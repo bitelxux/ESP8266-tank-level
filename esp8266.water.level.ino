@@ -31,6 +31,45 @@ int lastReading = 0;
 
 SoftwareSerial sensor(RX, TX);
 
+
+
+// prototipes
+void FlushStoredData();
+void registerNewReading();
+
+#define ID "tank.level"
+
+const char* ssid = "Starlink";
+const char* password = "82111847";
+const char* log_server = "http://192.168.1.162:8888";
+const char* baseURL = "http://192.168.1.162:8889";
+
+// all distances in meters
+float TANK_RADIUS = 0.6;
+float TANK_EMPTY_DISTANCE = 1.170;
+float TANK_FULL_DISTANCE= 0.21;
+float REMAINING_WATER_HEIGHT= 0.19;
+
+// circular buffer
+int sum = 0;
+int elementCount = 0;
+const int windowSize = 5;
+int circularBuffer[windowSize];
+int* circularBufferAccessor = circularBuffer;
+
+// pre-calculated
+float piR2=3.141516*TANK_RADIUS*TANK_RADIUS;
+
+int previous_distance = 0;
+
+typedef struct
+{
+  unsigned long timestamp;
+  short int value;
+} Reading;
+
+App app = App(ssid, password, ID, log_server);
+
 //OLED
 
 #include <SPI.h>
@@ -92,8 +131,21 @@ void updateDisplay(){
   display.setTextSize(1);             // Normal 1:1 pixel scale
   display.setTextColor(WHITE);        // Draw white text
   display.setCursor(0,18);            
-  sprintf(buffer, "Litros: %d", lastReading);
-  display.println(buffer);
+  display.print("Litros: ");
+  display.setCursor(46,18);            
+  display.print(lastReading);
+
+  unsigned short int counter = readEEPROMCounter();
+  display.setCursor(0,26);            
+  display.print("Local: ");
+  display.setCursor(46,26);            
+  display.print(counter);
+
+  display.setCursor(0,56);            
+  display.print("IP: ");
+  display.setCursor(46,56);            
+  display.print(app.IP);
+
   display.display();
 }
 
@@ -111,44 +163,6 @@ void initOLED(){
 }
 
 // OLED
-
-
-// prototipes
-void FlushStoredData();
-void registerNewReading();
-
-#define ID "tank.level"
-
-const char* ssid = "Starlink";
-const char* password = "82111847";
-const char* log_server = "http://192.168.1.162:8888";
-const char* baseURL = "http://192.168.1.162:8889";
-
-// all distances in meters
-float TANK_RADIUS = 0.6;
-float TANK_EMPTY_DISTANCE = 1.170;
-float TANK_FULL_DISTANCE= 0.21;
-float REMAINING_WATER_HEIGHT= 0.19;
-
-// circular buffer
-int sum = 0;
-int elementCount = 0;
-const int windowSize = 5;
-int circularBuffer[windowSize];
-int* circularBufferAccessor = circularBuffer;
-
-// pre-calculated
-float piR2=3.141516*TANK_RADIUS*TANK_RADIUS;
-
-int previous_distance = 0;
-
-typedef struct
-{
-  unsigned long timestamp;
-  short int value;
-} Reading;
-
-App app = App(ssid, password, ID, log_server);
 
 int calcLitres(short int distance){
 
