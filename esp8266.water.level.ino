@@ -27,10 +27,11 @@ unsigned char CS;
 int distance;
 int counter = 0; // number of registers in EEPROM
 
+int lastReading = 0;
+
 SoftwareSerial sensor(RX, TX);
 
 //OLED
-
 
 #include <SPI.h>
 #include <Wire.h>
@@ -66,6 +67,36 @@ static const unsigned char PROGMEM logo_bmp[] =
   B01110000, B01110000,
   B00000000, B00110000 };
 
+static const unsigned char PROGMEM wifi_bmp[] = 
+{
+0x00, 0x00, 0x00, 0x00, 0x07, 0xe0, 0x1f, 0xf8, 0x70, 0x0e, 0xe0, 0x07, 0x07, 0xe0, 0x1e, 0x78,
+0x18, 0x18, 0x03, 0xc0, 0x07, 0xe0, 0x00, 0x00, 0x01, 0x80, 0x01, 0x80, 0x00, 0x00, 0x00, 0x00
+};
+
+static const unsigned char PROGMEM nowifi_bmp[] = 
+{
+0x00, 0x01, 0x00, 0x3e, 0x01, 0xfe, 0x00, 0xfe, 0x00, 0xfe, 0x01, 0xfe, 0x03, 0x3c, 0x20, 0x3c,
+0x30, 0x64, 0x38, 0x40, 0x7c, 0x00, 0x7e, 0x00, 0x7f, 0x00, 0x7f, 0x80, 0x7c, 0x00, 0x80, 0x00
+};
+
+void updateDisplay(){
+  display.clearDisplay();
+  if (WiFi.status() == WL_CONNECTED){
+      display.drawBitmap(112, 0, wifi_bmp, 16, 16, 1);
+  }
+  else
+  {
+      display.drawBitmap(112, 0, nowifi_bmp, 16, 16, 1);
+  }
+
+  display.setTextSize(1);             // Normal 1:1 pixel scale
+  display.setTextColor(WHITE);        // Draw white text
+  display.setCursor(0,18);            
+  sprintf(buffer, "Litros: %d", lastReading);
+  display.println(buffer);
+  display.display();
+}
+
 void initOLED(){
 
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
@@ -77,21 +108,6 @@ void initOLED(){
   // the library initializes this with an Adafruit splash screen.
   display.display();
   delay(2000); // Pause for 2 seconds
-
-  // Clear the buffer
-  display.clearDisplay();
-
-  // Draw a single pixel in white
-  display.drawPixel(10, 10, WHITE);  
-}
-
-void drawText(){
-  display.clearDisplay();
-  display.setTextSize(1);             // Normal 1:1 pixel scale
-  display.setTextColor(WHITE);        // Draw white text
-  display.setCursor(0,0);             // Start at top-left corner
-  display.println(F("Hello, world!"));
-  display.display();
 }
 
 // OLED
@@ -193,6 +209,7 @@ void registerNewReading(){
     unsigned long now = app.epochTime + int(millis()/1000);
 
     int litres = calcLitres(distance);
+    lastReading = litres;
     sprintf(buffer, "%s/add/%d:%d", baseURL, now, litres);
 
     // try to send to the server
@@ -425,8 +442,8 @@ void setup() {
   sensor.begin(9600);
 
   app.addTimer(120 * 1000, FlushStoredData, "FlushStoredData");
-  app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
-  app.addTimer(1000, drawText, "drawText");
+  app.addTimer(1000, registerNewReading, "registerNewReading");
+  app.addTimer(1000, updateDisplay, "updateDisplay");
 }
 
 void loop() {
