@@ -32,7 +32,6 @@ int lastReading = 0;
 SoftwareSerial sensor(RX, TX);
 
 
-
 // prototipes
 void FlushStoredData();
 void registerNewReading();
@@ -118,8 +117,56 @@ static const unsigned char PROGMEM nowifi_bmp[] =
 0x30, 0x64, 0x38, 0x40, 0x7c, 0x00, 0x7e, 0x00, 0x7f, 0x00, 0x7f, 0x80, 0x7c, 0x00, 0x80, 0x00
 };
 
+static const unsigned char PROGMEM send_bmp[] = 
+{
+0x00, 0x00, 0x09, 0x00, 0x04, 0x00, 0x00, 0x80, 0x02, 0x40, 0x01, 0x20, 0x00, 0x80, 0x00, 0x90,
+0x00, 0x90, 0x00, 0x80, 0x01, 0x20, 0x02, 0x40, 0x00, 0x80, 0x04, 0x00, 0x09, 0x00, 0x00, 0x00
+};
+
+static const unsigned char PROGMEM store_bmp[] = 
+{
+0x7f, 0xfc, 0xe0, 0x6e, 0xe0, 0x6f, 0xe0, 0x6f, 0xe0, 0x6f, 0xe0, 0x2f, 0xff, 0xff, 0xff, 0xff,
+0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0xc0, 0x03, 0x7f, 0xfe
+};
+
+static const unsigned char PROGMEM disconnected_bmp[] = 
+{
+0x00, 0x01, 0x00, 0x3e, 0x01, 0xfe, 0x00, 0xfe, 0x00, 0xfe, 0x01, 0xfe, 0x03, 0x3c, 0x20, 0x3c,
+0x30, 0x64, 0x38, 0x40, 0x7c, 0x00, 0x7e, 0x00, 0x7f, 0x00, 0x7f, 0x80, 0x7c, 0x00, 0x80, 0x00
+};
+
+static const unsigned char PROGMEM connected_bmp[] = 
+{
+0x00, 0x01, 0x00, 0x02, 0x00, 0x64, 0x00, 0xf8, 0x07, 0xf8, 0x0b, 0xfc, 0x0d, 0xfc, 0x1e, 0xf8,
+0x1f, 0x78, 0x3f, 0xb0, 0x3f, 0xd0, 0x1f, 0xe0, 0x1f, 0x00, 0x26, 0x00, 0x40, 0x00, 0x80, 0x00
+};
+
+void clearSection(int x, int y, int x1, int y1){
+  display.fillRect(x, y, x1, y1, 0);
+  display.display();
+}
+
+void drawStore(){
+  display.drawBitmap(94, 0, store_bmp, 16, 16, 1);
+  display.display();
+}
+
+void drawSend(){
+  display.drawBitmap(94, 0, send_bmp, 16, 16, 1);
+  display.display();
+}
+
 void updateDisplay(){
   display.clearDisplay();
+
+  if (isServerAlive()){
+      display.drawBitmap(0, 0, connected_bmp, 16, 16, 1);
+  }
+  else
+  {
+      display.drawBitmap(0, 0, disconnected_bmp, 16, 16, 1);
+  }
+
   if (WiFi.status() == WL_CONNECTED){
       display.drawBitmap(112, 0, wifi_bmp, 16, 16, 1);
   }
@@ -229,10 +276,12 @@ void registerNewReading(){
     // try to send to the server
     // if fails, store locally for further retrying
     if (app.send(buffer)){
+      drawSend();
       sprintf(buffer, "Sent %d:%d", now, litres);
       app.log(buffer);
     }
     else{
+      drawStore();
       writeReading(now, distance);
       sprintf(buffer, "Locally stored %d:%d", now, litres);
       app.log(buffer);
@@ -337,6 +386,7 @@ void FlushStoredData(){
       }
       else
       {
+        drawSend();
         sent ++;
         sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d]", cursor);
         app.log(buffer);
@@ -344,6 +394,7 @@ void FlushStoredData(){
         value = -1;
         EEPROM.put(regAddress + sizeof(reading.timestamp), value);
         EEPROM.commit();            
+        clearSection(94, 0, 16, 16);
       }
   }
 
@@ -455,7 +506,7 @@ void setup() {
   // resetEEPROM();
   sensor.begin(9600);
 
-  app.addTimer(120 * 1000, FlushStoredData, "FlushStoredData");
+  app.addTimer(120*1000, FlushStoredData, "FlushStoredData");
   app.addTimer(1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
 }
