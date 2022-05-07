@@ -244,3 +244,23 @@ bool App::send(String what){
       return result;
 }
 
+String App::get(String what){
+
+  if (WiFi.status() != WL_CONNECTED){
+    return "NOWIFI";
+  }
+
+  bool result;
+  WiFiClient client;
+  HTTPClient http;
+  http.begin(client, what.c_str());
+  int httpResponseCode = http.GET();
+
+  if (httpResponseCode == 200){
+    return http.getString();
+  }
+  else
+  {
+    return "ERROR";
+  }
+}

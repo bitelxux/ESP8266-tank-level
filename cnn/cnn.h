@@ -81,6 +81,7 @@ class App{
 	void imAlive();
 	void log(char* msg);
 	bool send(String what);
+	String get(String what);
 	void connectIfNeeded();
 	void connect();
 	void handleOTA();

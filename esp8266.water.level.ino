@@ -15,8 +15,21 @@ board: NodeMCU1.0 (ESP-12E Module)
 // in the EEPROM
 #pragma pack(push, 1)
 
-//Constants
+//EEPROM
 #define EEPROM_SIZE 4 * 1024 * 1024
+#define RESERVED_BYTES 10
+#define COUNTER_SLOTS 10
+
+#define CURRENT_COUNTER_SLOT_ADDRESS 0 // 1 byte
+#define RECORDS_MARK_ADDRESS 1         // 2 bytes
+
+// 10 bytes are reserver for general data
+// we reserve space for 10 counters, 4 byte each
+// for each counter, first two bytes is the number
+// of write operations on the counter
+// the second two bytes is the counter itself
+#define RECORDS_BASE_ADDRESS RESERVER_BYTES + 4 * COUNTER_SLOTS 
+//\\ EEPROM
 
 #define TX 14
 #define RX 12
@@ -26,11 +39,9 @@ unsigned char dataBuffer[4] = {0};
 unsigned char CS;
 int distance;
 int counter = 0; // number of registers in EEPROM
-
 int lastReading = 0;
 
 SoftwareSerial sensor(RX, TX);
-
 
 // prototipes
 void FlushStoredData();
@@ -82,28 +93,6 @@ App app = App(ssid, password, ID, log_server);
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
-#define NUMFLAKES     10 // Number of snowflakes in the animation example
-
-#define LOGO_HEIGHT   16
-#define LOGO_WIDTH    16
-static const unsigned char PROGMEM logo_bmp[] =
-{ B00000000, B11000000,
-  B00000001, B11000000,
-  B00000001, B11000000,
-  B00000011, B11100000,
-  B11110011, B11100000,
-  B11111110, B11111000,
-  B01111110, B11111111,
-  B00110011, B10011111,
-  B00011111, B11111100,
-  B00001101, B01110000,
-  B00011011, B10100000,
-  B00111111, B11100000,
-  B00111111, B11110000,
-  B01111100, B11110000,
-  B01110000, B01110000,
-  B00000000, B00110000 };
 
 static const unsigned char PROGMEM wifi_bmp[] = 
 {
@@ -189,8 +178,6 @@ void updateDisplay(){
   display.print(counter);
 
   display.setCursor(0,56);            
-  display.print("IP: ");
-  display.setCursor(46,56);            
   display.print(app.IP);
 
   display.display();
@@ -205,8 +192,8 @@ void initOLED(){
 
   // Show initial display buffer contents on the screen --
   // the library initializes this with an Adafruit splash screen.
-  display.display();
-  delay(2000); // Pause for 2 seconds
+  //display.display();
+  //delay(2000); // Pause for 2 seconds
 }
 
 // OLED
@@ -411,8 +398,26 @@ void FlushStoredData(){
 
 }
 
-void writeCounter(unsigned short int value){
-  EEPROM.put(0, value); 
+void writeCounter(unsigned short int counter){
+  unsigned short counterAddress;
+  unsigned short int counterWrites;
+
+  EEPROM.get(CURRENT_COUNTER_SLOT_ADDRESS, counterAddress);
+  EEPROM.get(counterAddress, counterWrites);
+
+  if (counterWrites >= 49000){
+    // We are about to reach the 10K writes limit ...
+    // moving to the next slot
+    sprintf(buffer, "%i writes already !! moving counter to next slot ...", counterWrites);
+    app.log(buffer);
+    counterAddress += 4; // each counter is 2 byte for n of writes + 2 bytes for the counter
+    counterWrites = 0;
+    EEPROM.put(CURRENT_COUNTER_SLOT_ADDRESS, counterAddress);
+  }
+
+  EEPROM.put(counterAddress, counterWrites+1);
+  EEPROM.put(counterAddress + 2, counter);
+
   if (!EEPROM.commit()) {
     app.log("Commit failed writing counter");
   }
@@ -483,17 +488,23 @@ void readEEPROM(int regSize){
 }
 
 void resetEEPROM(){
+  int t0 = millis();
+  for (int i=0; i < EEPROM_SIZE; i++){
+    EEPROM.write(i, 0);
+  }
 
-  int address = 0;
-  unsigned short int counter=0;
-  EEPROM.put(address, counter);
   EEPROM.commit();
-  int a = 1/0; // I don't want to continue
+  int t2=millis();
+
+  sprintf(buffer, "EEPROM deleted in %d milliseconds", t2 - t0);
+  app.log(buffer);
 }
 
 unsigned short int readEEPROMCounter(){
+  unsigned short counterAddress;   
   unsigned short int counter;
-  EEPROM.get(0, counter);
+  EEPROM.get(CURRENT_COUNTER_SLOT_ADDRESS, counterAddress);
+  EEPROM.get(counterAddress + 2, counter); // skip counter writes 2 bytes
   return counter;
 }
 
@@ -509,6 +520,14 @@ void setup() {
   app.addTimer(120*1000, FlushStoredData, "FlushStoredData");
   app.addTimer(1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
+  app.addTimer(1000, todo, "todo");
+}
+
+void todo(){
+  sprintf(buffer, "%s/todo", baseURL);
+  String todo = app.get(buffer);
+
+  if (todo == "reset eeprom") resetEEPROM();
 }
 
 void loop() {
