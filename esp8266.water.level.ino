@@ -56,7 +56,7 @@ int lastReading = 0;
 SoftwareSerial sensor(RX, TX);
 
 // prototipes
-void FlushStoredData();
+void flushStoredData();
 void registerNewReading();
 
 #define ID "tank.level"
@@ -340,7 +340,7 @@ int readSensor(){
    }
 }
 
-void FlushStoredData(){
+void flushStoredData(){
 
   if (!isServerAlive()){
     sprintf(buffer, "[FLUSH_STORED_DATA] Server doesn't respond. I'll try later.");
@@ -563,7 +563,7 @@ void setup() {
   // resetEEPROM();
   sensor.begin(9600);
 
-  app.addTimer(30 * 1000, FlushStoredData, "FlushStoredData");
+  app.addTimer(30 * 1000, flushStoredData, "flushStoredData");
   app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
