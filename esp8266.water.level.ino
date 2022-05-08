@@ -352,7 +352,7 @@ void flushStoredData(){
   int sent = 0;
   
   if (WiFi.status() != WL_CONNECTED){
-    app.log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the internet :-/.");
+    app.log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the WIFI :-/.");
     return;
   }
 
@@ -363,6 +363,11 @@ void flushStoredData(){
   short int value;
   bool errors = false;
   short flag;
+
+  if (counter == 0){
+      app;log("[FLUSH_STORED_DATA] Nothing to send");
+      return;
+  }
 
   int regSize = sizeof(reading);
 
@@ -409,9 +414,6 @@ void flushStoredData(){
 
   if (!errors){
       sprintf(buffer, "[FLUSH_STORED_DATA] %d records sent", sent);
-      if (sent == 0){
-          writeCounter(0);
-      }
   } else {
       sprintf(buffer, "[FLUSH_STORED_DATA] %d records sent [errors]", sent);    
   }
