@@ -33,6 +33,8 @@ board: NodeMCU1.0 (ESP-12E Module)
 #define WARNING_6 64
 #define WARNING_7 128
 
+#define FLUSH_BATCH_SIZE 50
+
 // 10 bytes are reserver for general data
 // we reserve space for 10 counters, 4 byte each
 // for each counter, first two bytes is the number
@@ -44,7 +46,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 #define TX 14
 #define RX 12
 
-char buffer[100];
+char buffer[200];
 unsigned char dataBuffer[4] = {0};
 unsigned char CS;
 int distance;
@@ -84,7 +86,7 @@ int previous_distance = 0;
 
 typedef struct
 {
-  byte flag;
+  short flag;
   unsigned long timestamp;
   short int value;
 } Reading;
@@ -289,7 +291,7 @@ void registerNewReading(){
     }
     else{
       drawStore();
-      writeReading(now, distance);
+      writeReading(now, litres);
       sprintf(buffer, "Locally stored %d:%d", now, litres);
       app.log(buffer);
     }
@@ -341,13 +343,10 @@ int readSensor(){
 void FlushStoredData(){
 
   if (!isServerAlive()){
-    sprintf(buffer, "[FLUSH_STORED_DATA] Server doesn't respond. Skipping");
+    sprintf(buffer, "[FLUSH_STORED_DATA] Server doesn't respond. I'll try later.");
     app.log(buffer);
     return;
   }
-
-  // send will be done in batches to allow other tasks to run
-  unsigned short batch = 50;
 
   // You have to start server.py at BASE_URL
   int sent = 0;
@@ -363,6 +362,7 @@ void FlushStoredData(){
   int regAddress;
   short int value;
   bool errors = false;
+  short flag;
 
   int regSize = sizeof(reading);
 
@@ -372,15 +372,15 @@ void FlushStoredData(){
   
   for (cursor = 0; cursor < counter; cursor++){
 
-      if (sent >= batch){
+      if (sent >= FLUSH_BATCH_SIZE){
          break;
       }
 
-      regAddress = 2 + cursor*regSize; // +2 is to skip the counter bytes
+      regAddress = RECORDS_BASE_ADDRESS + cursor*regSize; 
       EEPROM.get(regAddress, reading);
 
       // if value is -1 that register was already sent
-      if (reading.value == -1){
+      if (reading.flag == -1){
         continue;
       }
       
@@ -394,14 +394,16 @@ void FlushStoredData(){
       else
       {
         drawSend();
+        decCounter();
         sent ++;
         sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d]", cursor);
         app.log(buffer);
         // We don't want to write the whole struct to save write cycles
-        value = -1;
-        EEPROM.put(regAddress + sizeof(reading.timestamp), value);
+        flag = -1;
+        EEPROM.put(regAddress, flag);
         EEPROM.commit();            
-        clearSection(94, 0, 16, 16);
+        //clearSection(94, 0, 16, 16);
+        updateDisplay();
       }
   }
 
@@ -424,11 +426,15 @@ unsigned short int incCounter(){
   return counter;
 }
 
+unsigned short int decCounter(){
+  counter = readCounter() - 1;
+  writeCounter(counter);
+  return counter;
+}
+
 byte readWarnings(){
   byte warnings;   
   warnings = EEPROM.read(WARNINGS_ADDRESS);
-  sprintf(buffer, "warnings byte is %d", warnings);
-  app.log(buffer);
   return warnings;
 }
 
@@ -449,6 +455,15 @@ unsigned short int readCounter(){
   return counter;
 }
 
+int getCounterSlot(){
+  byte counterAddress;
+  int counterSlot;
+
+  EEPROM.get(CURRENT_COUNTER_SLOT_ADDRESS, counterAddress);
+  counterSlot = (counterAddress-RESERVED_BYTES-1)/4 + 1;
+  return counterSlot;
+}
+
 void writeCounter(unsigned short int counter){
   byte counterAddress;
   int counterSlot;
@@ -457,7 +472,7 @@ void writeCounter(unsigned short int counter){
   EEPROM.get(CURRENT_COUNTER_SLOT_ADDRESS, counterAddress);
   EEPROM.get(counterAddress, counterWrites);
 
-  counterSlot = (counterAddress-1)/4 + 1;
+  counterSlot = getCounterSlot();
 
   if (counterWrites >= MAX_WRITES){
     // We are about to reach the 10K writes limit ...
@@ -488,8 +503,8 @@ void writeCounter(unsigned short int counter){
   EEPROM.put(counterAddress, counterWrites+1);
   EEPROM.put(counterAddress + 2, counter);
   
-  sprintf(buffer, "counter slot: %d, numwrites: %d", counterSlot, counterWrites+1);
-  app.log(buffer);
+  //sprintf(buffer, "counter slot: %d, numwrites: %d", counterSlot, counterWrites+1);
+  //app.log(buffer);
 
   if (!EEPROM.commit()) {
     app.log("Commit failed writing counter changes");
@@ -503,6 +518,7 @@ void writeReading(unsigned long in_timestamp, short int in_value){
   unsigned short int counter = readCounter();
  
   Reading newReading;
+  Reading record;
   Reading currentReading;
   
   newReading.timestamp = in_timestamp;
@@ -510,19 +526,17 @@ void writeReading(unsigned long in_timestamp, short int in_value){
   newReading.flag = 1;
 
   int regSize = sizeof(newReading);
-  short int flag;
+  short flag;
 
-  for (int address=RECORDS_BASE_ADDRESS; address < EEPROM_SIZE - regSize; address += regSize){
+  for (address=RECORDS_BASE_ADDRESS; address < EEPROM_SIZE - regSize; address += regSize){
       EEPROM.get(address, flag);
       if (flag == -1 || flag == 0){
         EEPROM.put(address, newReading);
+        EEPROM.commit();
         counter = incCounter();
-        sprintf(buffer, "Storing reading at %d", address);
-        app.log(buffer);
         break;
       }      
-  }
-  
+  }  
 }
 
 void resetEEPROM(){
@@ -549,8 +563,8 @@ void setup() {
   // resetEEPROM();
   sensor.begin(9600);
 
-  app.addTimer(120 * 1000, FlushStoredData, "FlushStoredData");
-  app.addTimer(1 * 1000, registerNewReading, "registerNewReading");
+  app.addTimer(30 * 1000, FlushStoredData, "FlushStoredData");
+  app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
 }
