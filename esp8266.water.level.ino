@@ -20,15 +20,25 @@ board: NodeMCU1.0 (ESP-12E Module)
 #define RESERVED_BYTES 10
 #define COUNTER_SLOTS 10
 
-#define CURRENT_COUNTER_SLOT_ADDRESS 0 // 1 byte
-#define RECORDS_MARK_ADDRESS 1         // 2 bytes
+#define CURRENT_COUNTER_SLOT_ADDRESS 0   // 1 byte
+#define MAX_WRITES 100000                // theorically 10000
+#define WARNINGS_ADDRESS 1               // bitmap supporting 8 predefined warnings
+
+#define WARNING_COUNTER_SLOTS_ROTATED  1 // counter slots were exhaested and ressetted to 1
+#define WARNING_1 2
+#define WARNING_2 4
+#define WARNING_3 8
+#define WARNING_4 16
+#define WARNING_5 32
+#define WARNING_6 64
+#define WARNING_7 128
 
 // 10 bytes are reserver for general data
 // we reserve space for 10 counters, 4 byte each
 // for each counter, first two bytes is the number
 // of write operations on the counter
 // the second two bytes is the counter itself
-#define RECORDS_BASE_ADDRESS RESERVER_BYTES + 4 * COUNTER_SLOTS 
+#define RECORDS_BASE_ADDRESS RESERVED_BYTES + 4 * COUNTER_SLOTS 
 //\\ EEPROM
 
 #define TX 14
@@ -74,6 +84,7 @@ int previous_distance = 0;
 
 typedef struct
 {
+  byte flag;
   unsigned long timestamp;
   short int value;
 } Reading;
@@ -130,6 +141,11 @@ static const unsigned char PROGMEM connected_bmp[] =
 0x1f, 0x78, 0x3f, 0xb0, 0x3f, 0xd0, 0x1f, 0xe0, 0x1f, 0x00, 0x26, 0x00, 0x40, 0x00, 0x80, 0x00
 };
 
+static const unsigned char PROGMEM warning_bmp[] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x80, 0x01, 0x80, 0x02, 0x40, 0x06, 0x60, 0x06, 0x60, 
+	0x0e, 0x70, 0x1f, 0xf8, 0x1e, 0x78, 0x3e, 0x7c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
 void clearSection(int x, int y, int x1, int y1){
   display.fillRect(x, y, x1, y1, 0);
   display.display();
@@ -147,6 +163,10 @@ void drawSend(){
 
 void updateDisplay(){
   display.clearDisplay();
+
+  if (readWarnings()){
+      display.drawBitmap(18, 0, warning_bmp, 16, 16, 1);
+  }
 
   if (isServerAlive()){
       display.drawBitmap(0, 0, connected_bmp, 16, 16, 1);
@@ -171,7 +191,7 @@ void updateDisplay(){
   display.setCursor(46,18);            
   display.print(lastReading);
 
-  unsigned short int counter = readEEPROMCounter();
+  unsigned short int counter = readCounter();
   display.setCursor(0,26);            
   display.print("Local: ");
   display.setCursor(46,26);            
@@ -338,7 +358,7 @@ void FlushStoredData(){
   }
 
   Reading reading;  
-  unsigned short int counter = readEEPROMCounter();
+  unsigned short int counter = readCounter();
   unsigned short int cursor = 0;
   int regAddress;
   short int value;
@@ -398,28 +418,81 @@ void FlushStoredData(){
 
 }
 
+unsigned short int incCounter(){
+  counter = readCounter() + 1;
+  writeCounter(counter);
+  return counter;
+}
+
+byte readWarnings(){
+  byte warnings;   
+  warnings = EEPROM.read(WARNINGS_ADDRESS);
+  sprintf(buffer, "warnings byte is %d", warnings);
+  app.log(buffer);
+  return warnings;
+}
+
+byte addWarning(byte warning){
+  byte warnings = readWarnings();
+  warnings |= warning;
+  EEPROM.write(WARNINGS_ADDRESS, warnings);
+  EEPROM.commit();
+
+  return warnings;
+}
+
+unsigned short int readCounter(){
+  byte counterAddress;   
+  unsigned short int counter;
+  EEPROM.get(CURRENT_COUNTER_SLOT_ADDRESS, counterAddress);
+  EEPROM.get(counterAddress + 2, counter); // skip counter writes: 2 bytes
+  return counter;
+}
+
 void writeCounter(unsigned short int counter){
-  unsigned short counterAddress;
+  byte counterAddress;
+  int counterSlot;
   unsigned short int counterWrites;
 
   EEPROM.get(CURRENT_COUNTER_SLOT_ADDRESS, counterAddress);
   EEPROM.get(counterAddress, counterWrites);
 
-  if (counterWrites >= 49000){
+  counterSlot = (counterAddress-1)/4 + 1;
+
+  if (counterWrites >= MAX_WRITES){
     // We are about to reach the 10K writes limit ...
     // moving to the next slot
-    sprintf(buffer, "%i writes already !! moving counter to next slot ...", counterWrites);
-    app.log(buffer);
-    counterAddress += 4; // each counter is 2 byte for n of writes + 2 bytes for the counter
+
+    //sprintf(buffer, "Counter slot %d reaching the limit of %d writings", counterSlot, MAX_WRITES);
+    //app.log(buffer);
+
+    if (counterSlot <  COUNTER_SLOTS){
+        counterSlot ++;
+        counterAddress += 4; // each counter is 2 byte for n of writes + 2 bytes for the counter
+        sprintf(buffer, "Counter slot moved to slot %d", counterSlot);
+        app.log(buffer);
+    }
+    else{
+        sprintf(buffer, "WARNING. Counter slots exhausted. Resetting to slot 1. Writes might start to fail soon");
+        addWarning(WARNING_COUNTER_SLOTS_ROTATED);
+        app.log(buffer);
+        counterSlot = 1;
+        counterAddress = 1;
+    }
+
     counterWrites = 0;
-    EEPROM.put(CURRENT_COUNTER_SLOT_ADDRESS, counterAddress);
+
+    EEPROM.write(CURRENT_COUNTER_SLOT_ADDRESS, counterAddress);
   }
 
   EEPROM.put(counterAddress, counterWrites+1);
   EEPROM.put(counterAddress + 2, counter);
+  
+  sprintf(buffer, "counter slot: %d, numwrites: %d", counterSlot, counterWrites+1);
+  app.log(buffer);
 
   if (!EEPROM.commit()) {
-    app.log("Commit failed writing counter");
+    app.log("Commit failed writing counter changes");
   }
 }
 
@@ -427,64 +500,29 @@ void writeReading(unsigned long in_timestamp, short int in_value){
   
   int address;
   int regAddress;
-  unsigned short int counter = readEEPROMCounter();
-  unsigned short int cursor;
+  unsigned short int counter = readCounter();
  
   Reading newReading;
   Reading currentReading;
   
   newReading.timestamp = in_timestamp;
   newReading.value = in_value;
+  newReading.flag = 1;
 
   int regSize = sizeof(newReading);
-  
-  for (cursor = 0; cursor < counter; cursor++){
-    regAddress = sizeof(counter) + cursor*regSize; // +sizeof counter is to skip the counter bytes
-    EEPROM.get(regAddress, currentReading);
+  short int flag;
 
-    if (currentReading.value == -1){ // Re-use old register
-      sprintf(buffer, "Reused position %d", regAddress);
-      app.log(buffer);
-      EEPROM.put(regAddress, newReading);
-      if (!EEPROM.commit()) {
-        app.log("Commit failed on re-use");
-      }
-      break;
-    }
-  }
-
-  if (cursor == counter){ // new register
-      regAddress = sizeof(counter) + cursor*regSize; // +sizeof counter is to skip the counter bytes
-
-      // Serial.print("New register at ");
-      // Serial.println(regAddress);
-
-      EEPROM.put(regAddress, newReading);
-      counter += 1;
-      writeCounter(counter);
+  for (int address=RECORDS_BASE_ADDRESS; address < EEPROM_SIZE - regSize; address += regSize){
+      EEPROM.get(address, flag);
+      if (flag == -1 || flag == 0){
+        EEPROM.put(address, newReading);
+        counter = incCounter();
+        sprintf(buffer, "Storing reading at %d", address);
+        app.log(buffer);
+        break;
+      }      
   }
   
-}
-
-void readEEPROM(int regSize){
-
-  unsigned short int counter = readEEPROMCounter();
-  unsigned short int cursor = 0;
-  int regAddress;
-  char buffer[100];
-
-  sprintf(buffer, "%d registers currently stored in EEPROM", counter);
-  app.log(buffer);
-
-  /*
-  for (cursor = 0; cursor < counter; cursor++){
-    regAddress = 2 + cursor*regSize; // +2 is to skip the counter bytes
-    EEPROM.get(regAddress, reading);
-    sprintf(buffer, "Address %d: %d:%d", regAddress, reading.timestamp, reading.value);
-    log(buffer);
-  }
-  */
-
 }
 
 void resetEEPROM(){
@@ -493,19 +531,13 @@ void resetEEPROM(){
     EEPROM.write(i, 0);
   }
 
+  EEPROM.write(CURRENT_COUNTER_SLOT_ADDRESS, RESERVED_BYTES);
+
   EEPROM.commit();
   int t2=millis();
 
   sprintf(buffer, "EEPROM deleted in %d milliseconds", t2 - t0);
   app.log(buffer);
-}
-
-unsigned short int readEEPROMCounter(){
-  unsigned short counterAddress;   
-  unsigned short int counter;
-  EEPROM.get(CURRENT_COUNTER_SLOT_ADDRESS, counterAddress);
-  EEPROM.get(counterAddress + 2, counter); // skip counter writes 2 bytes
-  return counter;
 }
 
 void setup() {
@@ -517,8 +549,8 @@ void setup() {
   // resetEEPROM();
   sensor.begin(9600);
 
-  app.addTimer(120*1000, FlushStoredData, "FlushStoredData");
-  app.addTimer(1000, registerNewReading, "registerNewReading");
+  app.addTimer(120 * 1000, FlushStoredData, "FlushStoredData");
+  app.addTimer(1 * 1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
 }
