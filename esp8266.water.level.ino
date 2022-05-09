@@ -40,11 +40,13 @@ board: NodeMCU1.0 (ESP-12E Module)
 // for each counter, first two bytes is the number
 // of write operations on the counter
 // the second two bytes is the counter itself
-#define RECORDS_BASE_ADDRESS RESERVED_BYTES + 4 * COUNTER_SLOTS 
+// #define RECORDS_BASE_ADDRESS RESERVED_BYTES + 4 * COUNTER_SLOTS 
 //\\ EEPROM
 
 #define TX 14
 #define RX 12
+
+unsigned short int RECORDS_BASE_ADDRESS = RESERVED_BYTES + 4 * COUNTER_SLOTS;
 
 char buffer[200];
 unsigned char dataBuffer[4] = {0};
@@ -349,7 +351,7 @@ void flushStoredData(){
   }
 
   // You have to start server.py at BASE_URL
-  int sent = 0;
+  unsigned short int sent = 0;
   
   if (WiFi.status() != WL_CONNECTED){
     app.log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the WIFI :-/.");
@@ -359,13 +361,14 @@ void flushStoredData(){
   Reading reading;  
   unsigned short int counter = readCounter();
   unsigned short int cursor = 0;
-  int regAddress;
+  unsigned short int regAddress;
   short int value;
   bool errors = false;
   short flag;
+  unsigned short int recNum;
 
   if (counter == 0){
-      app;log("[FLUSH_STORED_DATA] Nothing to send");
+      app.log("[FLUSH_STORED_DATA] Nothing to send");
       return;
   }
 
@@ -375,25 +378,51 @@ void flushStoredData(){
   //sprintf(buffer, "[FLUSH_STORED_DATA] %d registers", counter);
   //Serial.println(buffer);
   
-  for (cursor = 0; cursor < counter; cursor++){
+  regAddress = RECORDS_BASE_ADDRESS - regSize;
+  while( regAddress <= EEPROM_SIZE - 2*regSize){
+
+      regAddress += regSize;
 
       if (sent >= FLUSH_BATCH_SIZE){
          break;
       }
-
-      regAddress = RECORDS_BASE_ADDRESS + cursor*regSize; 
+      
       EEPROM.get(regAddress, reading);
-
+      
       // if value is -1 that register was already sent
+      // 0 the position is not used
       if (reading.flag == -1){
+        sprintf(buffer, "Address %d already sent [%d]", regAddress, reading.flag);
+        app.log(buffer);
         continue;
       }
+
+      // flag 0 means that position or higher have never been used
+      if (reading.flag == 0){
+        return;
+      }
+
+      sprintf(buffer, "base address is %d. regaddress is %d, flag is %d. regsize: %d", RECORDS_BASE_ADDRESS, regAddress, reading.flag, regSize);
+      app.log(buffer);
+
+      recNum = (regAddress - RECORDS_BASE_ADDRESS)/regSize;
+
+      sprintf(buffer, "%d - %d: regAddress - RECORDS_BASE_ADDRESS is %d", regAddress, RECORDS_BASE_ADDRESS, regAddress - RECORDS_BASE_ADDRESS);
+      app.log(buffer);
+
+      sprintf(buffer, "regSize is %d", regSize);
+      app.log(buffer);
       
+      sprintf(buffer, ">> recNum is %d", recNum);
+      app.log(buffer);
+
+      //delay(60000);
+
       sprintf(buffer, "%s/add/%d:%d", baseURL, reading.timestamp, reading.value);
 
       if (!app.send(buffer)){
-        //sprintf(buffer, "[FLUSH_STORED_DATA] Error sending register [%d]", cursor);
-        //app.log(buffer);
+        sprintf(buffer, "[FLUSH_STORED_DATA] Error sending record [%d]", recNum);
+        app.log(buffer);
         errors = true;
       }
       else
@@ -401,15 +430,21 @@ void flushStoredData(){
         drawSend();
         decCounter();
         sent ++;
-        sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d]", cursor);
+        sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d]", recNum);
         app.log(buffer);
         // We don't want to write the whole struct to save write cycles
         flag = -1;
         EEPROM.put(regAddress, flag);
-        EEPROM.commit();            
+        EEPROM.commit();
+
+        EEPROM.get(regAddress, reading);
+        sprintf(buffer, "address %d flag after setting to -1 is %d", regAddress, reading.flag);
+        app.log(buffer);
+
         //clearSection(94, 0, 16, 16);
         updateDisplay();
       }
+
   }
 
   if (!errors){
@@ -566,7 +601,7 @@ void setup() {
   sensor.begin(9600);
 
   app.addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
+  app.addTimer(1 * 1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
 }
