@@ -375,8 +375,6 @@ void flushStoredData(){
   int regSize = sizeof(reading);
 
   char buffer[100];
-  //sprintf(buffer, "[FLUSH_STORED_DATA] %d registers", counter);
-  //Serial.println(buffer);
   
   regAddress = RECORDS_BASE_ADDRESS - regSize;
   while( regAddress <= EEPROM_SIZE - 2*regSize){
@@ -388,12 +386,10 @@ void flushStoredData(){
       }
       
       EEPROM.get(regAddress, reading);
-      
+
       // if value is -1 that register was already sent
-      // 0 the position is not used
+      // 0 the position hasn't been used yet
       if (reading.flag == -1){
-        sprintf(buffer, "Address %d already sent [%d]", regAddress, reading.flag);
-        app.log(buffer);
         continue;
       }
 
@@ -402,21 +398,7 @@ void flushStoredData(){
         return;
       }
 
-      sprintf(buffer, "base address is %d. regaddress is %d, flag is %d. regsize: %d", RECORDS_BASE_ADDRESS, regAddress, reading.flag, regSize);
-      app.log(buffer);
-
       recNum = (regAddress - RECORDS_BASE_ADDRESS)/regSize;
-
-      sprintf(buffer, "%d - %d: regAddress - RECORDS_BASE_ADDRESS is %d", regAddress, RECORDS_BASE_ADDRESS, regAddress - RECORDS_BASE_ADDRESS);
-      app.log(buffer);
-
-      sprintf(buffer, "regSize is %d", regSize);
-      app.log(buffer);
-      
-      sprintf(buffer, ">> recNum is %d", recNum);
-      app.log(buffer);
-
-      //delay(60000);
 
       sprintf(buffer, "%s/add/%d:%d", baseURL, reading.timestamp, reading.value);
 
@@ -432,16 +414,12 @@ void flushStoredData(){
         sent ++;
         sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d]", recNum);
         app.log(buffer);
+
         // We don't want to write the whole struct to save write cycles
         flag = -1;
         EEPROM.put(regAddress, flag);
         EEPROM.commit();
 
-        EEPROM.get(regAddress, reading);
-        sprintf(buffer, "address %d flag after setting to -1 is %d", regAddress, reading.flag);
-        app.log(buffer);
-
-        //clearSection(94, 0, 16, 16);
         updateDisplay();
       }
 
@@ -600,8 +578,8 @@ void setup() {
   // resetEEPROM();
   sensor.begin(9600);
 
-  app.addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app.addTimer(1 * 1000, registerNewReading, "registerNewReading");
+  app.addTimer(120 * 1000, flushStoredData, "flushStoredData");
+  app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
 }
