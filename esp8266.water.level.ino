@@ -83,6 +83,7 @@ int* circularBufferAccessor = circularBuffer;
 
 // pre-calculated
 float piR2=3.141516*TANK_RADIUS*TANK_RADIUS;
+float MAX_VOLUME = piR2 * (TANK_EMPTY_DISTANCE + REMAINING_WATER_HEIGHT) * 1000;
 
 int previous_distance = 0;
 
@@ -155,6 +156,20 @@ void clearSection(int x, int y, int x1, int y1){
   display.display();
 }
 
+void drawTank(){
+  int outerX = 100;
+  int outerY = 18;
+  int outerWidth = 20;
+  int outerHeight = 46;
+  display.drawRoundRect(outerX, outerY, outerWidth, outerHeight, 4, 1);
+
+  int innerWidth = outerWidth - 4;
+  int innerHeight = (lastReading * outerHeight)/MAX_VOLUME;
+  int innerX = outerX + 2;
+  int innerY = outerY + 2 + outerHeight - innerHeight - 4;
+  display.fillRoundRect(innerX, innerY, innerWidth, innerHeight, 4, 1);
+}
+
 void drawStore(){
   display.drawBitmap(94, 0, store_bmp, 16, 16, 1);
   display.display();
@@ -167,6 +182,8 @@ void drawSend(){
 
 void updateDisplay(){
   display.clearDisplay();
+
+  drawTank();
 
   if (readWarnings()){
       display.drawBitmap(18, 0, warning_bmp, 16, 16, 1);
@@ -406,13 +423,19 @@ void flushStoredData(){
         sprintf(buffer, "[FLUSH_STORED_DATA] Error sending record [%d]", recNum);
         app.log(buffer);
         errors = true;
+        if (!isServerAlive()){
+          sprintf(buffer, "[FLUSH_STORED_DATA] Server doesn't respond. I'll try later.");
+          app.log(buffer);
+          break;
+        }
+
       }
       else
       {
         drawSend();
         decCounter();
         sent ++;
-        sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d]", recNum);
+        sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d] (%d left)", recNum, readCounter());
         app.log(buffer);
 
         // We don't want to write the whole struct to save write cycles
