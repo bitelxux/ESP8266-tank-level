@@ -427,6 +427,10 @@ void flushStoredData(){
 
   if (!errors){
       sprintf(buffer, "[FLUSH_STORED_DATA] %d records sent", sent);
+      // to correct a buggy counter out of sync error that sometimes happens
+      if (sent == 0){
+        writeCounter(0);
+      }
   } else {
       sprintf(buffer, "[FLUSH_STORED_DATA] %d records sent [errors]", sent);    
   }
@@ -545,6 +549,7 @@ void writeReading(unsigned long in_timestamp, short int in_value){
 
   for (address=RECORDS_BASE_ADDRESS; address < EEPROM_SIZE - regSize; address += regSize){
       EEPROM.get(address, flag);
+      // flag 1 is a used position
       if (flag == -1 || flag == 0){
         EEPROM.put(address, newReading);
         EEPROM.commit();
@@ -578,8 +583,8 @@ void setup() {
   // resetEEPROM();
   sensor.begin(9600);
 
-  app.addTimer(120 * 1000, flushStoredData, "flushStoredData");
-  app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
+  app.addTimer(30 * 1000, flushStoredData, "flushStoredData");
+  app.addTimer(1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
 }
