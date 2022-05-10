@@ -157,9 +157,9 @@ void clearSection(int x, int y, int x1, int y1){
 }
 
 void drawTank(){
-  int outerX = 100;
+  int outerX = 90;
   int outerY = 18;
-  int outerWidth = 20;
+  int outerWidth = 37;
   int outerHeight = 46;
   display.drawRoundRect(outerX, outerY, outerWidth, outerHeight, 4, 1);
 
