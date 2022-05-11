@@ -16,7 +16,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 #pragma pack(push, 1)
 
 //EEPROM
-#define EEPROM_SIZE 4 * 1024 * 1024
+#define EEPROM_SIZE 4096
 #define RESERVED_BYTES 10
 #define COUNTER_SLOTS 10
 
@@ -25,7 +25,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 #define WARNINGS_ADDRESS 1               // bitmap supporting 8 predefined warnings
 
 #define WARNING_COUNTER_SLOTS_ROTATED  1 // counter slots were exhaested and ressetted to 1
-#define WARNING_1 2
+#define WARNING_STORAGE_IS_FULL 2
 #define WARNING_2 4
 #define WARNING_3 8
 #define WARNING_4 16
@@ -46,7 +46,16 @@ board: NodeMCU1.0 (ESP-12E Module)
 #define TX 14
 #define RX 12
 
+typedef struct
+{
+  short flag;
+  unsigned long timestamp;
+  unsigned short value;
+} Reading;
+
+
 unsigned short int RECORDS_BASE_ADDRESS = RESERVED_BYTES + 4 * COUNTER_SLOTS;
+unsigned short int MAX_RECORDS = (EEPROM_SIZE - RECORDS_BASE_ADDRESS)/sizeof(Reading);
 
 char buffer[200];
 unsigned char dataBuffer[4] = {0};
@@ -86,13 +95,6 @@ float piR2=3.141516*TANK_RADIUS*TANK_RADIUS;
 float MAX_VOLUME = piR2 * (TANK_EMPTY_DISTANCE + REMAINING_WATER_HEIGHT) * 1000;
 
 int previous_distance = 0;
-
-typedef struct
-{
-  short flag;
-  unsigned long timestamp;
-  short int value;
-} Reading;
 
 App app = App(ssid, password, ID, log_server);
 
@@ -279,6 +281,7 @@ bool isServerAlive(){
 
 void registerNewReading(){
   int distance;
+  int counter;
   char buffer[100];
 
   // purge some possible noise
@@ -310,9 +313,7 @@ void registerNewReading(){
     }
     else{
       drawStore();
-      writeReading(now, litres);
-      sprintf(buffer, "Locally stored %d:%d", now, litres);
-      app.log(buffer);
+      counter = writeReading(now, litres);
     }
         
   }
@@ -361,19 +362,6 @@ int readSensor(){
 
 void flushStoredData(){
 
-  if (!isServerAlive()){
-    sprintf(buffer, "[FLUSH_STORED_DATA] Server doesn't respond. I'll try later.");
-    app.log(buffer);
-    return;
-  }
-
-  // You have to start server.py at BASE_URL
-  unsigned short int sent = 0;
-  
-  if (WiFi.status() != WL_CONNECTED){
-    app.log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the WIFI :-/.");
-    return;
-  }
 
   Reading reading;  
   unsigned short int counter = readCounter();
@@ -383,20 +371,42 @@ void flushStoredData(){
   bool errors = false;
   short flag;
   unsigned short int recNum;
+  unsigned short int sent = 0;
+  int regSize = sizeof(reading);
+  char buffer[100];
+ 
+  app.log("This is the flushStoredDAta");
+
+  sprintf(buffer, "MAX_RECORDS is %d", MAX_RECORDS);
+  app.log(buffer);
+
+  sprintf(buffer, "regSize is %d", sizeof(Reading));
+  app.log(buffer);
+
+  // You have to start server.py at BASE_URL
+  if (!isServerAlive()){
+    sprintf(buffer, "[FLUSH_STORED_DATA] Server doesn't respond. I'll try later.");
+    app.log(buffer);
+    return;
+  }
+
+  app.log("This is the flushStoredDAta after check serverAlive");
+  
+  if (WiFi.status() != WL_CONNECTED){
+    app.log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the WIFI :-/.");
+    return;
+  }
+
+  app.log("This is the flushStoredDAta after check wifi");
 
   if (counter == 0){
       app.log("[FLUSH_STORED_DATA] Nothing to send");
       return;
   }
 
-  int regSize = sizeof(reading);
-
-  char buffer[100];
+  app.log("This is the flushStoredDAta after check counter");
   
-  regAddress = RECORDS_BASE_ADDRESS - regSize;
-  while( regAddress <= EEPROM_SIZE - 2*regSize){
-
-      regAddress += regSize;
+  for (regAddress = RECORDS_BASE_ADDRESS; regAddress < EEPROM_SIZE; regAddress += regSize){
 
       if (sent >= FLUSH_BATCH_SIZE){
          break;
@@ -407,15 +417,21 @@ void flushStoredData(){
       // if value is -1 that register was already sent
       // 0 the position hasn't been used yet
       if (reading.flag == -1){
+        sprintf(buffer, "address %d, flag is -1. value %d. continue", regAddress, reading.value);
+        app.log(buffer);
         continue;
       }
 
       // flag 0 means that position or higher have never been used
       if (reading.flag == 0){
+        sprintf(buffer, "address %d flag is 0. return", regAddress);
+        app.log(buffer);
         return;
       }
 
       recNum = (regAddress - RECORDS_BASE_ADDRESS)/regSize;
+      sprintf(buffer, "rec %d (%d bytes) has something", recNum, regSize);
+      app.log(buffer);
 
       sprintf(buffer, "%s/add/%d:%d", baseURL, reading.timestamp, reading.value);
 
@@ -435,6 +451,7 @@ void flushStoredData(){
         drawSend();
         decCounter();
         sent ++;
+        
         sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d] (%d left)", recNum, readCounter());
         app.log(buffer);
 
@@ -442,6 +459,8 @@ void flushStoredData(){
         flag = -1;
         EEPROM.put(regAddress, flag);
         EEPROM.commit();
+
+        removeWarning(WARNING_STORAGE_IS_FULL);
 
         updateDisplay();
       }
@@ -480,12 +499,23 @@ byte readWarnings(){
   return warnings;
 }
 
+byte removeWarning(byte warning){
+  byte warnings = readWarnings();
+  if (!(warnings && warning)){
+    // warning was not set. nothing to remove
+    return warnings;
+  }
+  warnings ^= warning;
+  EEPROM.write(WARNINGS_ADDRESS, warnings);
+  EEPROM.commit();
+  return warnings;
+}
+
 byte addWarning(byte warning){
   byte warnings = readWarnings();
   warnings |= warning;
   EEPROM.write(WARNINGS_ADDRESS, warnings);
   EEPROM.commit();
-
   return warnings;
 }
 
@@ -553,12 +583,18 @@ void writeCounter(unsigned short int counter){
   }
 }
 
-void writeReading(unsigned long in_timestamp, short int in_value){
+int writeReading(unsigned long in_timestamp, short int in_value){
   
   int address;
   int regAddress;
   unsigned short int counter = readCounter();
  
+  if (counter >= MAX_RECORDS){
+    addWarning(WARNING_STORAGE_IS_FULL);
+    app.log("WARNING. Local storage is full");
+    return -1;
+  }
+
   Reading newReading;
   Reading record;
   Reading currentReading;
@@ -576,10 +612,15 @@ void writeReading(unsigned long in_timestamp, short int in_value){
       if (flag == -1 || flag == 0){
         EEPROM.put(address, newReading);
         EEPROM.commit();
-        counter = incCounter();
+        counter = incCounter();        
+        app.log("Locally stored 1");
+        sprintf(buffer, "Locally stored [%d of %d] %d:%d", counter, MAX_RECORDS, in_timestamp, in_value);
+        app.log(buffer);
         break;
       }      
   }  
+
+  return counter;
 }
 
 void resetEEPROM(){
