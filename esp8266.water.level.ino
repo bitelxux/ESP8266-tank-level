@@ -408,7 +408,7 @@ void flushStoredData(){
   
   for (regAddress = RECORDS_BASE_ADDRESS; regAddress < EEPROM_SIZE; regAddress += regSize){
 
-      if (sent >= FLUSH_BATCH_SIZE){
+      if (counter == 0 || sent >= FLUSH_BATCH_SIZE){
          break;
       }
       
@@ -449,7 +449,7 @@ void flushStoredData(){
       else
       {
         drawSend();
-        decCounter();
+        counter = decCounter();
         sent ++;
         
         sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d] (%d left)", recNum, readCounter());
