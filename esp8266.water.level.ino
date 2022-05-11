@@ -644,13 +644,13 @@ void setup() {
   
   Serial.begin(115200); 
   EEPROM.begin(EEPROM_SIZE);
-  // resetEEPROM();
   sensor.begin(9600);
 
-  app.addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app.addTimer(1000, registerNewReading, "registerNewReading");
+  app.addTimer(120 * 1000, flushStoredData, "flushStoredData");
+  app.addTimer(300 * 1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
+
 }
 
 void todo(){
