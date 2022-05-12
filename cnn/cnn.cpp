@@ -29,10 +29,7 @@ void App::imAlive(){
   this->logger->log(buffer);
 }
 
-App::App(const char* SSID,
-         const char* password,
-	 const char* ID, 
-	 const char* log_server){
+App::App(const char* ID, const char* log_server){
     this->ID = ID;
     this->log_server = log_server;
     this->SSID = SSID;
@@ -41,12 +38,22 @@ App::App(const char* SSID,
     this->logger = new Log(this, this->ID, this->log_server);
 
     this->addTimer(60000, &App::imAlive, "imAlive");
-    this->addTimer(5000, &App::connectIfNeeded, "connectIfNeeded");
     this->addTimer(1000, &App::handleOTA, "handleOTA");
     this->addTimer(1000, &App::blinkLED, "blinkLED");
 
     pinMode(LED, OUTPUT);
 
+    // WiFiManager
+    // Local intialization. Once its business is done, there is no need to keep it around
+    this->wifiManager = new WiFiManager();
+
+}
+
+void App::startWiFiManager(){
+  //this->wifiManager->resetSettings();
+  this->wifiManager->autoConnect("TankLevel");
+  this->initNTP();
+  ArduinoOTA.begin();
 }
 
 void App::blinkLED(){
@@ -146,70 +153,6 @@ void App::initNTP(){
 
 void App::log(char* msg){
     this->logger->log(msg);
-}
-
-
-void App::connectIfNeeded(){
-  // If millis() < 30000L is the first boot so it will try to connect
-  // for further attempts it will try with spaces of 60 seconds
-
-  if (WiFi.status() != WL_CONNECTED && (millis() < 30000L || millis() - this->tLastConnectionAttempt > 60000L)){
-    Serial.println("Trying to connect");
-    this->connect();
-  }
-
-  // also if we don't have time, try to update
-  if (!this->epochTime){
-    Serial.println("NTP time not updated. Trying to");
-    this->initNTP();
-  }
-}
-
-void App::connect(){
-
-  char buffer[100];
-
-  Serial.println("");
-  Serial.println("Connecting");
-
-  WiFi.begin(this->SSID, this->password);
-
-  this->tLastConnectionAttempt = millis();
-  this->tConnect =  millis();
-  while(WiFi.status() != WL_CONNECTED) {
-    digitalWrite(LED, !digitalRead(LED));
-    delay(100);
-    if ((millis() - this->tConnect) > 500){
-      Serial.print(".");
-      this->tConnect = millis();
-    }
-
-    // If it doesn't connect, let the thing continue
-    // in the case that in a previous connection epochTime was
-    // initizalized, it will store readings for future send
-    if (millis() - this->tLastConnectionAttempt >= 30000L){      
-      break;
-    }    
-  }
-
-  Serial.println("");
-
-  if (WiFi.status() == WL_CONNECTED) { 
-    IPAddress ip = WiFi.localIP();
-    sprintf(this->IP, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-    
-    sprintf(buffer, "Connected to %s with IP %s", this->SSID, IP);
-    this->log(buffer);
-
-    ArduinoOTA.begin();
-  }
-  else
-  {
-    Serial.println("Failed to connect");
-  }
-
-  this->tLastConnectionAttempt = millis();
-  
 }
 
 void App::handleOTA(){

@@ -8,6 +8,11 @@
 #include <EEPROM.h> //https://github.com/esp8266/Arduino/blob/master/libraries/EEPROM/EEPROM.h
 #include <NTPClient.h> // install NTPClient from manage libraries
 
+#include <DNSServer.h>
+#include <ESP8266WebServer.h>
+#include <WiFiManager.h>         // https://github.com/tzapu/WiFiManager
+
+
 /*
 static const uint8_t D0   = 16;
 static const uint8_t D1   = 5;
@@ -55,24 +60,24 @@ class Log{
 
 class App{
     public:
-        const char* ID;
-        const char* log_server;
-        const char* SSID;
-        const char* password;
+
+	const char* ID;
+    const char* log_server;
+    const char* SSID;
+    const char* password;
 	int LED = 2;
 	char IP[16];
 	unsigned long epochTime = 0;
 	unsigned long tLastConnectionAttempt = 0;
 	unsigned long tConnect = 0;
 
+	WiFiManager *wifiManager = NULL;
+
 	Timer* timers = NULL;
 
 	Log* logger;
 
-	App(const char* SSID,
-   	    const char* log_password,
-	    const char* ID,
-	    const char* server);
+	App(const char* ID, const char* server);
 
 	void initNTP();
 	void addTimer(int millis, AppCallback function, char* name);
@@ -82,10 +87,9 @@ class App{
 	void log(char* msg);
 	bool send(String what);
 	String get(String what);
-	void connectIfNeeded();
-	void connect();
 	void handleOTA();
 	void blinkLED();
+	void startWiFiManager();
 };
 
 

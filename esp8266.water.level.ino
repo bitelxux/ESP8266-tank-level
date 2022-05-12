@@ -53,7 +53,6 @@ typedef struct
   unsigned short value;
 } Reading;
 
-
 unsigned short int RECORDS_BASE_ADDRESS = RESERVED_BYTES + 4 * COUNTER_SLOTS;
 unsigned short int MAX_RECORDS = (EEPROM_SIZE - RECORDS_BASE_ADDRESS)/sizeof(Reading);
 
@@ -72,10 +71,10 @@ void registerNewReading();
 
 #define ID "tank.level"
 
-const char* ssid = "Starlink";
-const char* password = "82111847";
 const char* log_server = "http://192.168.1.162:8888";
 const char* baseURL = "http://192.168.1.162:8889";
+
+App app = App(ID, log_server);
 
 // all distances in meters
 float TANK_RADIUS = 0.6;
@@ -96,7 +95,7 @@ float MAX_VOLUME = piR2 * (TANK_EMPTY_DISTANCE + REMAINING_WATER_HEIGHT) * 1000;
 
 int previous_distance = 0;
 
-App app = App(ssid, password, ID, log_server);
+
 
 //OLED
 
@@ -647,10 +646,17 @@ void setup() {
   sensor.begin(9600);
 
   app.addTimer(120 * 1000, flushStoredData, "flushStoredData");
-  app.addTimer(300 * 1000, registerNewReading, "registerNewReading");
+  app.addTimer(1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
 
+  app.startWiFiManager();
+
+}
+
+void resetWifi(){
+  app.wifiManager->resetSettings();
+  app.log("reset WIFI networks");
 }
 
 void todo(){
@@ -658,6 +664,7 @@ void todo(){
   String todo = app.get(buffer);
 
   if (todo == "reset eeprom") resetEEPROM();
+  if (todo == "forget wifis") resetWifi();
 }
 
 void loop() {
