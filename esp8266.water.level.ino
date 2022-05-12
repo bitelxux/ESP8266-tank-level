@@ -56,6 +56,23 @@ typedef struct
 unsigned short int RECORDS_BASE_ADDRESS = RESERVED_BYTES + 4 * COUNTER_SLOTS;
 unsigned short int MAX_RECORDS = (EEPROM_SIZE - RECORDS_BASE_ADDRESS)/sizeof(Reading);
 
+// all distances in meters
+float TANK_RADIUS = 0.6;
+float TANK_EMPTY_DISTANCE = 1.170;
+float TANK_FULL_DISTANCE= 0.21;
+float REMAINING_WATER_HEIGHT= 0.19;
+
+// circular buffer
+int sum = 0;
+int elementCount = 0;
+const int windowSize = 5;
+int circularBuffer[windowSize];
+int* circularBufferAccessor = circularBuffer;
+
+// pre-calculated
+float piR2=3.141516*TANK_RADIUS*TANK_RADIUS;
+float MAX_VOLUME = 1000 * piR2 * (TANK_EMPTY_DISTANCE + REMAINING_WATER_HEIGHT);
+
 char buffer[200];
 unsigned char dataBuffer[4] = {0};
 unsigned char CS;
@@ -76,26 +93,8 @@ const char* baseURL = "http://192.168.1.162:8889";
 
 App app = App(ID, log_server);
 
-// all distances in meters
-float TANK_RADIUS = 0.6;
-float TANK_EMPTY_DISTANCE = 1.170;
-float TANK_FULL_DISTANCE= 0.21;
-float REMAINING_WATER_HEIGHT= 0.19;
-
-// circular buffer
-int sum = 0;
-int elementCount = 0;
-const int windowSize = 5;
-int circularBuffer[windowSize];
-int* circularBufferAccessor = circularBuffer;
-
-// pre-calculated
-float piR2=3.141516*TANK_RADIUS*TANK_RADIUS;
-float MAX_VOLUME = piR2 * (TANK_EMPTY_DISTANCE + REMAINING_WATER_HEIGHT) * 1000;
 
 int previous_distance = 0;
-
-
 
 //OLED
 
@@ -158,6 +157,7 @@ void clearSection(int x, int y, int x1, int y1){
 }
 
 void drawTank(){
+
   int outerX = 90;
   int outerY = 18;
   int outerWidth = 37;
@@ -169,6 +169,7 @@ void drawTank(){
   int innerX = outerX + 2;
   int innerY = outerY + 2 + outerHeight - innerHeight - 4;
   display.fillRoundRect(innerX, innerY, innerWidth, innerHeight, 4, 1);
+
 }
 
 void drawStore(){
@@ -645,8 +646,8 @@ void setup() {
   EEPROM.begin(EEPROM_SIZE);
   sensor.begin(9600);
 
-  app.addTimer(120 * 1000, flushStoredData, "flushStoredData");
-  app.addTimer(1000, registerNewReading, "registerNewReading");
+  app.addTimer(30 * 1000, flushStoredData, "flushStoredData");
+  app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
 
@@ -655,8 +656,8 @@ void setup() {
 }
 
 void resetWifi(){
-  app.wifiManager->resetSettings();
   app.log("reset WIFI networks");
+  app.wifiManager->resetSettings();
 }
 
 void todo(){
