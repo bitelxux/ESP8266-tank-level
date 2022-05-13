@@ -40,6 +40,7 @@ App::App(const char* ID, const char* log_server){
     this->addTimer(60000, &App::imAlive, "imAlive");
     this->addTimer(1000, &App::handleOTA, "handleOTA");
     this->addTimer(1000, &App::blinkLED, "blinkLED");
+    this->addTimer(15 * 60 * 1000, &App::initNTP, "initNTP");
 
     pinMode(LED, OUTPUT);
 
@@ -140,6 +141,8 @@ void App::attendTimers(){
 
 
 void App::initNTP(){
+
+  char buffer[50];
   // Initialize a NTPClient to get time
   //logger.log("[NTP_UPDATE] Updating NTP time");
   timeClient.begin();
@@ -151,8 +154,8 @@ void App::initNTP(){
   timeClient.setTimeOffset(7200);
   timeClient.update();
   this->epochTime = timeClient.getEpochTime();
-  //sprintf(buffer, "epochTime set to %d", epochTime);
-  //logger.log(buffer);
+  sprintf(buffer, "NTP synced [%d]", epochTime);
+  this->log(buffer);
 }
 
 void App::log(char* msg){
