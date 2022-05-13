@@ -58,7 +58,8 @@ typedef struct
 } Reading;
 
 unsigned short int RECORDS_BASE_ADDRESS = RESERVED_BYTES + 4 * COUNTER_SLOTS;
-unsigned short int MAX_RECORDS = (EEPROM_SIZE - RECORDS_BASE_ADDRESS)/sizeof(Reading);
+unsigned short int MAX_RECORDS = (EEPROM_SIZE - RECORDS_BASE_ADDRESS)/sizeof(Reading) -1;
+// TODO review that -1. It's not the best approach
 
 // all distances in meters
 float TANK_RADIUS = 0.6;
@@ -589,6 +590,9 @@ int writeReading(unsigned long in_timestamp, short int in_value){
   int regAddress;
   unsigned short int counter = readCounter();
  
+  //sprintf(buffer, "writeReading %d %d", counter, MAX_RECORDS);
+  //app.log(buffer);
+
   if (counter >= MAX_RECORDS){
     addWarning(WARNING_STORAGE_IS_FULL);
     app.log("WARNING. Local storage is full");
