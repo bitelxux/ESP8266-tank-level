@@ -35,6 +35,10 @@ board: NodeMCU1.0 (ESP-12E Module)
 
 #define FLUSH_BATCH_SIZE 50
 
+#define REC_NEVER_USED 0
+#define REC_IN_USE 1
+#define REC_FLUSHED 2
+
 // 10 bytes are reserver for general data
 // we reserve space for 10 counters, 4 byte each
 // for each counter, first two bytes is the number
@@ -48,7 +52,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 
 typedef struct
 {
-  short flag;
+  byte flag;
   unsigned long timestamp;
   unsigned short value;
 } Reading;
@@ -369,7 +373,7 @@ void flushStoredData(){
   unsigned short int regAddress;
   short int value;
   bool errors = false;
-  short flag;
+  byte flag;
   unsigned short int recNum;
   unsigned short int sent = 0;
   int regSize = sizeof(reading);
@@ -414,18 +418,14 @@ void flushStoredData(){
       
       EEPROM.get(regAddress, reading);
 
-      // if value is -1 that register was already sent
+      // if value is REC_FLUSHED that register was already sent
       // 0 the position hasn't been used yet
-      if (reading.flag == -1){
-        sprintf(buffer, "address %d, flag is -1. value %d. continue", regAddress, reading.value);
-        app.log(buffer);
+      if (reading.flag == REC_FLUSHED){
         continue;
       }
 
       // flag 0 means that position or higher have never been used
-      if (reading.flag == 0){
-        sprintf(buffer, "address %d flag is 0. return", regAddress);
-        app.log(buffer);
+      if (reading.flag == REC_NEVER_USED){
         return;
       }
 
@@ -456,8 +456,8 @@ void flushStoredData(){
         app.log(buffer);
 
         // We don't want to write the whole struct to save write cycles
-        flag = -1;
-        EEPROM.put(regAddress, flag);
+        flag = REC_FLUSHED;
+        EEPROM.write(regAddress, flag);
         EEPROM.commit();
 
         removeWarning(WARNING_STORAGE_IS_FULL);
@@ -601,19 +601,18 @@ int writeReading(unsigned long in_timestamp, short int in_value){
   
   newReading.timestamp = in_timestamp;
   newReading.value = in_value;
-  newReading.flag = 1;
+  newReading.flag = REC_IN_USE;
 
   int regSize = sizeof(newReading);
-  short flag;
+  byte flag;
 
   for (address=RECORDS_BASE_ADDRESS; address < EEPROM_SIZE - regSize; address += regSize){
       EEPROM.get(address, flag);
-      // flag 1 is a used position
-      if (flag == -1 || flag == 0){
+      // flag is a used position
+      if (flag != REC_IN_USE){
         EEPROM.put(address, newReading);
         EEPROM.commit();
         counter = incCounter();        
-        app.log("Locally stored 1");
         sprintf(buffer, "Locally stored [%d of %d] %d:%d", counter, MAX_RECORDS, in_timestamp, in_value);
         app.log(buffer);
         break;
@@ -647,7 +646,7 @@ void setup() {
   sensor.begin(9600);
 
   app.addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
+  app.addTimer(1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
 
