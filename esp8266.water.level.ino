@@ -658,6 +658,7 @@ void setup() {
 void resetWifi(){
   app.log("reset WIFI networks");
   app.wifiManager->resetSettings();
+  ESP.restart();
 }
 
 void todo(){
