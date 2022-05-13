@@ -17,5 +17,7 @@ It's a Work in Progress !! Far from being finished !
 Also the servers (tank level server and logs server) are not finished.
 
 Link 'cnn' library to arduino's libraries directory
+That 'cnn' library will be split from the main code at some point.
+And it needs a proper name !
 
 Keep syntonized if you want to see where this ends
