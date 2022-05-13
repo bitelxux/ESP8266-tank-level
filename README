@@ -10,7 +10,7 @@ This version will have a lot of improvements like pseudo-threads,
 smart use of EEPROM to store readings when connection to the server is not available,
 WiFiManager to dynamically manage connections from any browser,
 commands inyection from the server to force actions to happen in the
-ESP like EEPROM reset of forget WiFis and much more.
+ESP like EEPROM reset or forget WiFis and much more !!
 
 It's a Work in Progress !! Far from being finished !
 
