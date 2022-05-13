@@ -297,11 +297,11 @@ void registerNewReading(){
     return;
   }
 
-  if (app.epochTime){
-    unsigned long now = app.epochTime + int(millis()/1000);
+  unsigned long now = app.epochTime + int(millis()/1000);
+  int litres = calcLitres(distance);
+  lastReading = litres;
 
-    int litres = calcLitres(distance);
-    lastReading = litres;
+  if (app.epochTime){
     sprintf(buffer, "%s/add/%d:%d", baseURL, now, litres);
 
     // try to send to the server
@@ -641,7 +641,7 @@ void resetEEPROM(){
 void setup() {
 
   initOLED();
-  
+
   Serial.begin(115200); 
   EEPROM.begin(EEPROM_SIZE);
   sensor.begin(9600);
@@ -653,6 +653,8 @@ void setup() {
 
   app.startWiFiManager();
 
+  delay(5000); // wait for sensor to settle
+  registerNewReading();
 }
 
 void resetWifi(){
