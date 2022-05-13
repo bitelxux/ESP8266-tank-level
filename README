@@ -6,8 +6,8 @@ where very likely Grafana will show a nice chart.
 It supports connection outages by storing values locally with a timestamp
 and sending them once the connection is resumed.
 
-This version will have a lot of improvements like smart use of EEPROM
-to store readings when connection to the server is not available,
+This version will have a lot of improvements like pseudo-threads, 
+smart use of EEPROM to store readings when connection to the server is not available,
 WiFiManager to dynamically manage connections from any browser,
 commands inyection from the server to force actions to happen in the
 ESP like EEPROM reset of forget WiFis and much more.
