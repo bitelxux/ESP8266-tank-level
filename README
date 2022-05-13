@@ -1,11 +1,21 @@
 New version of https://github.com/bitelxux/levelsensor
 
-Based in a ESP8266 reading from the sensor and uploading to the server.
+Based in a ESP8266 reading from the sensor and uploading to a server
+where very likely Grafana will show a nice chart.
 
 It supports connection outages by storing values locally with a timestamp
 and sending them once the connection is resumed.
 
-HEADS UP!: Server part is WIP. current server.py and server2.py are still
-those from the original project.
+This version will have a lot of improvements like smart use of EEPROM
+to store readings when connection to the server is not available,
+WiFiManager to dynamically manage connections from any browser,
+commands inyection from the server to force actions to happen in the
+ESP like EEPROM reset of forget WiFis and much more.
+
+It's a Work in Progress !! Far from being finished !
+
+Also the servers (tank level server and logs server) are not finished.
 
 Link 'cnn' library to arduino's libraries directory
+
+Keep syntonized if you want to see where this ends
