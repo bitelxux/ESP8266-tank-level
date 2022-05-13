@@ -380,14 +380,6 @@ void flushStoredData(){
   int regSize = sizeof(reading);
   char buffer[100];
  
-  app.log("This is the flushStoredDAta");
-
-  sprintf(buffer, "MAX_RECORDS is %d", MAX_RECORDS);
-  app.log(buffer);
-
-  sprintf(buffer, "regSize is %d", sizeof(Reading));
-  app.log(buffer);
-
   // You have to start server.py at BASE_URL
   if (!isServerAlive()){
     sprintf(buffer, "[FLUSH_STORED_DATA] Server doesn't respond. I'll try later.");
@@ -395,22 +387,16 @@ void flushStoredData(){
     return;
   }
 
-  app.log("This is the flushStoredDAta after check serverAlive");
-  
   if (WiFi.status() != WL_CONNECTED){
     app.log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the WIFI :-/.");
     return;
   }
-
-  app.log("This is the flushStoredDAta after check wifi");
 
   if (counter == 0){
       app.log("[FLUSH_STORED_DATA] Nothing to send");
       return;
   }
 
-  app.log("This is the flushStoredDAta after check counter");
-  
   for (regAddress = RECORDS_BASE_ADDRESS; regAddress < EEPROM_SIZE; regAddress += regSize){
 
       if (counter == 0 || sent >= FLUSH_BATCH_SIZE){
@@ -431,9 +417,6 @@ void flushStoredData(){
       }
 
       recNum = (regAddress - RECORDS_BASE_ADDRESS)/regSize;
-      sprintf(buffer, "rec %d (%d bytes) has something", recNum, regSize);
-      app.log(buffer);
-
       sprintf(buffer, "%s/add/%d:%d", baseURL, reading.timestamp, reading.value);
 
       if (!app.send(buffer)){
