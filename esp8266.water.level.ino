@@ -304,7 +304,14 @@ void registerNewReading(){
   int counter;
   char buffer[100];
 
-  distance = readSensor();
+  // some attempts to read a value from sensor
+  for (int i=0; i<10; i++){
+      distance = readSensor();
+      if (distance != -1){
+        break;
+      }
+      delay(20);
+  }
 
   if (distance == -1){
     app.log("Error reading value from sensor");
@@ -344,8 +351,14 @@ int readSensor_mode1(){
 
     int mm = t/(29.2*2)*10;
 
-    sprintf(buffer, "duration was %i. mm was %i", t, mm);
-    app.log(buffer);
+    //sprintf(buffer, "duration was %d. mm was %d", t, mm);
+    //app.log(buffer);
+
+    // wrong reading
+    if (t == 0){
+        return -1;
+    }
+
     return(mobileAverage(mm));
 }
 
