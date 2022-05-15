@@ -15,6 +15,8 @@ board: NodeMCU1.0 (ESP-12E Module)
 // in the EEPROM
 #pragma pack(push, 1)
 
+#define SENSOR_MODE 1
+
 //EEPROM
 #define EEPROM_SIZE 4096
 #define RESERVED_BYTES 10
@@ -47,8 +49,21 @@ board: NodeMCU1.0 (ESP-12E Module)
 // #define RECORDS_BASE_ADDRESS RESERVED_BYTES + 4 * COUNTER_SLOTS 
 //\\ EEPROM
 
+// for sensor mode 0
+#define TRIGGER_PIN 14
+#define ECHO_PIN 12
+#define USONIC_DIV 58.0
+
+// for sensor mode 1
+// requires to solder a 47K resistor
 #define TX 14
 #define RX 12
+
+#if (SENSOR_MODE == 1)
+  int (*readSensor)() = &readSensor_mode1;
+#else
+int (*readSensor)() = &readSensor_mode2;
+#endif
 
 typedef struct
 {
@@ -289,12 +304,6 @@ void registerNewReading(){
   int counter;
   char buffer[100];
 
-  // purge some possible noise
-  for (int i=0; i<10; i++){
-    readSensor();
-    delay(50);
-  }
-
   distance = readSensor();
 
   if (distance == -1){
@@ -325,9 +334,24 @@ void registerNewReading(){
 
 }
 
+// Trigger + Echo mode
+int readSensor_mode1(){
+    long t = 0; // Measure: Put up Trigger...
+    digitalWrite(TRIGGER_PIN, HIGH); // Wait for 11 µs ...
+    delayMicroseconds(11); // Put the trigger down ...
+    digitalWrite(TRIGGER_PIN, LOW); // Wait for the echo ...
+    t = pulseIn(ECHO_PIN, HIGH);
 
-// returns the mobile average of current reading
-int readSensor(){
+    int mm = t/(29.2*2)*10;
+
+    sprintf(buffer, "duration was %i. mm was %i", t, mm);
+    app.log(buffer);
+    return(mobileAverage(mm));
+}
+
+
+// read from serial. Requires a 47K resistor soldered on the board.
+int readSensor_mode2(){
 
    short int distance = 0;
 
@@ -630,7 +654,17 @@ void setup() {
 
   Serial.begin(115200); 
   EEPROM.begin(EEPROM_SIZE);
-  sensor.begin(9600);
+
+  if (SENSOR_MODE == 1){
+      sensor.begin(9600);
+  }
+  else
+  {
+      pinMode(TRIGGER_PIN, OUTPUT); // Initializing Trigger Output and Echo Input
+      pinMode(ECHO_PIN, INPUT);
+      digitalWrite(TRIGGER_PIN, LOW); // Reset the trigger pin and wait a half a second
+      delayMicroseconds(500);  
+  }
 
   app.addTimer(30 * 1000, flushStoredData, "flushStoredData");
   app.addTimer(1000, registerNewReading, "registerNewReading");
