@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  db:
+    hostname:  db
+    image: mysql:8.0
+    cap_add:
+      - SYS_NICE
+    restart: always
+    environment:
+      - MYSQL_DATABASE=tank
+      - MYSQL_ROOT_PASSWORD=tank
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-data/init.sql:/docker-entrypoint-initdb.d/init.sql
+  server:
+    image: ubuntu
+    hostname: server
+    ports:
+      - 8080:8080
+      - 8081:8081
+    command: tail -f /dev/null
+    restart: always
+  grafana:
+    image: grafana/grafana-oss
+    hostname: grafana
+    ports:
+      - 3000:3000
+volumes:
+  mysql-data:
+    driver: local

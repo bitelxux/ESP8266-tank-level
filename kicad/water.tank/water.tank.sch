@@ -18,7 +18,7 @@ REST
 Text GLabel 3850 2550 0    50   Input ~ 0
 ADC
 Text GLabel 3850 2650 0    50   Input ~ 0
-CH_PC
+CH_PD
 Text GLabel 3850 2750 0    50   Input ~ 0
 IO16
 Text GLabel 3850 2850 0    50   Input ~ 0
@@ -94,7 +94,7 @@ L Connector:Conn_01x04_Female OLED1
 U 1 1 628020C7
 P 4850 3800
 F 0 "OLED1" H 4650 4000 50  0000 L CNN
-F 1 "OLED" H 4650 4050 50  0001 L CNN
+F 1 "OLED1" H 4650 4050 50  0001 L CNN
 F 2 "Connector_JST:JST_EH_B4B-EH-A_1x04_P2.50mm_Vertical" H 4850 3800 50  0001 C CNN
 F 3 "~" H 4850 3800 50  0001 C CNN
 	1    4850 3800
@@ -167,11 +167,11 @@ F 3 "https://www.st.com/resource/en/datasheet/ld1086.pdf" H 6900 3750 50  0001 C
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector:Conn_01x02_Female J5
+L Connector:Conn_01x02_Female 5V1
 U 1 1 62840F2A
 P 7150 2550
-F 0 "J5" H 7178 2526 50  0000 L CNN
-F 1 "5V" H 7178 2435 50  0000 L CNN
+F 0 "5V1" H 7178 2526 50  0000 L CNN
+F 1 "source" H 7178 2435 50  0001 L CNN
 F 2 "Connector_JST:JST_EH_B2B-EH-A_1x02_P2.50mm_Vertical" H 7150 2550 50  0001 C CNN
 F 3 "~" H 7150 2550 50  0001 C CNN
 	1    7150 2550
@@ -230,7 +230,7 @@ L Connector:Conn_01x04_Female SENSOR1
 U 1 1 628034E6
 P 4450 3700
 F 0 "SENSOR1" H 4200 3400 50  0000 L CNN
-F 1 "SENSOR" H 4342 3367 50  0001 C CNN
+F 1 "JSN" H 4342 3367 50  0001 C CNN
 F 2 "Connector_PinSocket_2.54mm:PinSocket_1x04_P2.54mm_Vertical" H 4450 3700 50  0001 C CNN
 F 3 "~" H 4450 3700 50  0001 C CNN
 	1    4450 3700

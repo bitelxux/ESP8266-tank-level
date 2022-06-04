@@ -15,7 +15,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 // in the EEPROM
 #pragma pack(push, 1)
 
-#define SENSOR_MODE 1
+#define SENSOR_MODE 2
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -62,7 +62,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 #if (SENSOR_MODE == 1)
   int (*readSensor)() = &readSensor_mode1;
 #else
-int (*readSensor)() = &readSensor_mode2;
+  int (*readSensor)() = &readSensor_mode2;
 #endif
 
 typedef struct
@@ -106,10 +106,10 @@ SoftwareSerial sensor(RX, TX);
 void flushStoredData();
 void registerNewReading();
 
-#define ID "tank.level"
+#define ID "tank.level.A"
 
-const char* log_server = "http://192.168.1.162:8888";
-const char* baseURL = "http://192.168.1.162:8889";
+const char* log_server = "http://192.168.0.108:8888";
+const char* baseURL = "http://192.168.0.108:8889";
 
 App app = App(ID, log_server);
 
@@ -392,6 +392,8 @@ int readSensor_mode2(){
     
        if (dataBuffer[3] == CS){
          distance = (dataBuffer[1] << 8) + dataBuffer[2];
+         //sprintf(buffer, "lectura: %d", distance);
+         //app.log(buffer);
          return mobileAverage(distance);
        }
        else{
@@ -663,12 +665,17 @@ void resetEEPROM(){
 
 void setup() {
 
-  initOLED();
-
   Serial.begin(115200); 
+
+  //app.wifiManager->resetSettings();
+  //Serial.println("Wifi reseted");
+  //delay(5000);
+  //return;
+
+  initOLED();
   EEPROM.begin(EEPROM_SIZE);
 
-  if (SENSOR_MODE == 1){
+  if (SENSOR_MODE == 2){
       sensor.begin(9600);
   }
   else
@@ -680,7 +687,7 @@ void setup() {
   }
 
   app.addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app.addTimer(1000, registerNewReading, "registerNewReading");
+  app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
 

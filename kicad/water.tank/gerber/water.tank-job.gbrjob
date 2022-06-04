@@ -7,7 +7,7 @@
       "Application": "Pcbnew",
       "Version":     "5.1.9+dfsg1-1"
     },
-    "CreationDate":  "2022-05-15T20:14:44+02:00"
+    "CreationDate":  "2022-05-17T23:06:01+02:00"
   },
   "GeneralSpecs":
   {
@@ -19,8 +19,8 @@
     },
     "Size":
     {
-      "X": 0.000,
-      "Y": 0.000
+      "X": 61.010,
+      "Y": 35.610
     },
     "LayerNumber": 2,
     "BoardThickness":  1.600
@@ -32,7 +32,9 @@
       "PadToPad":  0.200,
       "PadToTrack":  0.200,
       "TrackToTrack":  0.200,
-      "MinLineWidth":  1.000
+      "MinLineWidth":  0.500,
+      "TrackToRegion":  0.508,
+      "RegionToRegion":  0.508
     }
   ],
   "FilesAttributes":
@@ -45,16 +47,6 @@
     {
       "Path":  "water.tank-B_Cu.gbr",
       "FileFunction":  "Copper,L2,Bot",
-      "FilePolarity":  "Positive"
-    },
-    {
-      "Path":  "water.tank-F_Paste.gbr",
-      "FileFunction":  "SolderPaste,Top",
-      "FilePolarity":  "Positive"
-    },
-    {
-      "Path":  "water.tank-B_Paste.gbr",
-      "FileFunction":  "SolderPaste,Bot",
       "FilePolarity":  "Positive"
     },
     {
@@ -90,10 +82,6 @@
       "Notes":  "Layer F.SilkS"
     },
     {
-      "Type":  "SolderPaste",
-      "Notes":  "Layer F.Paste"
-    },
-    {
       "Type":  "SolderMask",
       "Notes":  "Layer F.Mask"
     },
@@ -113,10 +101,6 @@
     {
       "Type":  "SolderMask",
       "Notes":  "Layer B.Mask"
-    },
-    {
-      "Type":  "SolderPaste",
-      "Notes":  "Layer B.Paste"
     },
     {
       "Type":  "Legend",
