@@ -3,6 +3,7 @@ services:
   db:
     hostname:  db
     image: mysql:8.0
+    restart: always
     cap_add:
       - SYS_NICE
     restart: always
@@ -15,6 +16,7 @@ services:
   server:
     image: ubuntu
     hostname: server
+    restart: always
     ports:
       - 8080:8080
       - 8081:8081
@@ -23,6 +25,7 @@ services:
   grafana:
     image: grafana/grafana-oss
     hostname: grafana
+    restart: always
     ports:
       - 3000:3000
 volumes:
