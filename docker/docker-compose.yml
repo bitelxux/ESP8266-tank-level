@@ -2,7 +2,7 @@ version: '3.8'
 services:
   db:
     hostname:  db
-    image: mysql:8.0
+    image: yobasystems/alpine-mariadb
     restart: always
     cap_add:
       - SYS_NICE
