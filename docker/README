@@ -1,0 +1,3 @@
+This docker-compose should work straight away on a i86 arch.
+However, for ARM (Raspberry, BeagleBone, etc) you might need to locally build the mysql
+docker image as described at https://github.com/nanhantianyi/docker-mysql-5.7-aarch64
