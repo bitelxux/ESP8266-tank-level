@@ -10,8 +10,8 @@ services:
       - MYSQL_DATABASE=tank
       - MYSQL_ROOT_PASSWORD=tank
     volumes:
-      - mysql-data:/var/lib/mysql
-      - ./mysql-data/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./mysql-data:/var/lib/mysql
+      - ./mysql-scripts:/docker-entrypoint-initdb.d
   server:
     image: ubuntu
     hostname: server
