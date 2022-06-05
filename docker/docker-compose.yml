@@ -1,29 +1,25 @@
-version: '3.8'
+version: '3.3'
 services:
-  db:
-    hostname:  db
-    image: yobasystems/alpine-mariadb
+  influxdb:
+    hostname: influxdb
+    image: influxdb:1.8
     restart: always
-    cap_add:
-      - SYS_NICE
     restart: always
-    environment:
-      - MYSQL_DATABASE=tank
-      - MYSQL_ROOT_PASSWORD=tank
     volumes:
-      - ./mysql-data:/var/lib/mysql
-      - ./mysql-scripts:/docker-entrypoint-initdb.d
+      - ./influxdb:/var/lib/influxdb
   server:
-    image: ubuntu
+    build: server
     hostname: server
     restart: always
+    volumes:
+      - ./server-scripts:/server-scripts
     ports:
-      - 8080:8080
-      - 8081:8081
-    command: tail -f /dev/null
+      - 8888:8888
+      - 8889:8889
+    command: /server-scripts/start.sh
     restart: always
   grafana:
-    image: grafana/grafana-oss
+    image: grafana/grafana:latest
     hostname: grafana
     restart: always
     ports:
@@ -31,3 +27,4 @@ services:
 volumes:
   mysql-data:
     driver: local
+
