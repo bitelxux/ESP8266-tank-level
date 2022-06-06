@@ -34,10 +34,10 @@ def add(value):
               }
           }
         ]
-        client.write(body)
-        return f"The value {value} has been gladly added")
+        client.write_point(body)
+        return f"The value {value} has been gladly added"
     except:
-        return f"there was an error writing {value}")
+        return f"there was an error writing {value}"
 
 @app.route('/todo')
 def todo():
