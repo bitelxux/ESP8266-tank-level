@@ -1,7 +1,12 @@
 #!/usr/bin/python3
 
 import os
+
+from influxdb import InfluxDBClient
 from flask import Flask, Markup, render_template, abort
+
+client = InfluxDBClient(host='influxdb', port=8086, username='admin', password='admin')
+client.switch_database('tank')
 
 app = Flask(__name__)
 
@@ -16,7 +21,23 @@ def ping():
 @app.route('/add/<string:value>')
 def add(value):
     print(f"adding {value}")
-    return "The value %s has been gladly added" % value
+    try:
+        timestamp, value = value.split(":")
+        int_timestamp = int(timestamp)
+        int_value = int(value)
+        body = [
+          {
+              "meassurement": "readings",
+              "time": int_timestamp,
+              "fields": {
+                  "value": int_value
+              }
+          }
+        ]
+        client.write(body)
+        return f"The value {value} has been gladly added")
+    except:
+        return f"there was an error writing {value}")
 
 @app.route('/todo')
 def todo():
