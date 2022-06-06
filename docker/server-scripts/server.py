@@ -21,13 +21,14 @@ def ping():
 @app.route('/add/<string:value>')
 def add(value):
     print(f"adding {value}")
-    try:
+    return "val3e"
+    if True:
         timestamp, value = value.split(":")
         int_timestamp = int(timestamp)
         int_value = int(value)
         body = [
           {
-              "meassurement": "readings",
+              "measurement": "readings",
               "time": int_timestamp,
               "fields": {
                   "value": int_value
@@ -36,8 +37,6 @@ def add(value):
         ]
         client.write_point(body)
         return f"The value {value} has been gladly added"
-    except:
-        return f"there was an error writing {value}"
 
 @app.route('/todo')
 def todo():
