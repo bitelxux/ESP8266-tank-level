@@ -40,7 +40,7 @@ App::App(const char* ID, const char* log_server){
     this->addTimer(60000, &App::imAlive, "imAlive");
     this->addTimer(1000, &App::handleOTA, "handleOTA");
     this->addTimer(1000, &App::blinkLED, "blinkLED");
-    this->addTimer(15 * 60 * 1000, &App::initNTP, "initNTP");
+    // this->addTimer(60 * 1000, &App::initNTP, "initNTP");
 
     pinMode(LED, OUTPUT);
 
@@ -145,17 +145,31 @@ void App::initNTP(){
   char buffer[50];
   // Initialize a NTPClient to get time
   //logger.log("[NTP_UPDATE] Updating NTP time");
-  timeClient.begin();
   // Set offset time in seconds to adjust for your timezone, for example:
+  timeClient.begin();
   // GMT +1 = 3600
   // GMT +8 = 28800
   // GMT -1 = -3600
   // GMT 0 = 0
-  timeClient.setTimeOffset(7200);
-  timeClient.update();
-  this->epochTime = timeClient.getEpochTime();
-  sprintf(buffer, "NTP synced [%d]", epochTime);
-  this->log(buffer);
+  timeClient.setTimeOffset(0);
+  if (timeClient.update()){
+      this->log("NTP synced");
+  }
+  else{
+      this->log("ERROR: NTP failed to sync");
+  }
+    
+}
+
+unsigned long App::getEpochSeconds(){
+  if (timeClient.update()){
+      return timeClient.getEpochTime();
+  }
+  else
+  {
+      this->log("Error updating NTP time");
+      return 0;
+  }
 }
 
 void App::log(char* msg){

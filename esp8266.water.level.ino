@@ -106,13 +106,13 @@ SoftwareSerial sensor(RX, TX);
 void flushStoredData();
 void registerNewReading();
 
-#define ID "tank.level.A"
+#define ID "tank.A"
+#define VERSION "20220611.5"
 
 const char* log_server = "http://192.168.0.108:8888";
 const char* baseURL = "http://192.168.0.108:8889";
 
 App app = App(ID, log_server);
-
 
 int previous_distance = 0;
 
@@ -318,11 +318,11 @@ void registerNewReading(){
     return;
   }
 
-  unsigned long now = app.epochTime + int(millis()/1000);
   int litres = calcLitres(distance);
   lastReading = litres;
 
-  if (app.epochTime){
+  unsigned long now = app.getEpochSeconds();
+  if (now){
     sprintf(buffer, "%s/add/%d:%d", baseURL, now, litres);
 
     // try to send to the server
@@ -337,6 +337,9 @@ void registerNewReading(){
       counter = writeReading(now, litres);
     }
         
+  }
+  else{
+      app.log("Warning: Not handling reading as time is not updated");
   }
 
 }

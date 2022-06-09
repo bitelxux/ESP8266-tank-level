@@ -61,35 +61,35 @@ class Log{
 class App{
     public:
 
-	const char* ID;
+    const char* ID;
     const char* log_server;
     const char* SSID;
     const char* password;
-	int LED = 2;
-	char IP[16];
-	unsigned long epochTime = 0;
-	unsigned long tLastConnectionAttempt = 0;
-	unsigned long tConnect = 0;
-
-	WiFiManager *wifiManager = NULL;
-
-	Timer* timers = NULL;
-
-	Log* logger;
-
-	App(const char* ID, const char* server);
-
-	void initNTP();
-	void addTimer(int millis, AppCallback function, char* name);
-	void addTimer(int millis, function_callback function, char* name);
-	void attendTimers();
-	void imAlive();
-	void log(char* msg);
-	bool send(String what);
-	String get(String what);
-	void handleOTA();
-	void blinkLED();
-	void startWiFiManager();
+    int LED = 2;
+    char IP[16];
+    unsigned long tLastConnectionAttempt = 0;
+    unsigned long tConnect = 0;
+    
+    WiFiManager *wifiManager = NULL;
+    
+    Timer* timers = NULL;
+    
+    Log* logger;
+    
+    App(const char* ID, const char* server);
+    
+    void initNTP();
+    void addTimer(int millis, AppCallback function, char* name);
+    void addTimer(int millis, function_callback function, char* name);
+    void attendTimers();
+    void imAlive();
+    void log(char* msg);
+    bool send(String what);
+    String get(String what);
+    void handleOTA();
+    void blinkLED();
+    void startWiFiManager();
+    unsigned long getEpochSeconds();
 };
 
 
