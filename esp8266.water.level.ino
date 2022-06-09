@@ -106,13 +106,13 @@ SoftwareSerial sensor(RX, TX);
 void flushStoredData();
 void registerNewReading();
 
-#define ID "tank.A"
-#define VERSION "20220611.5"
+#define BOARD_ID "tank.z"
+#define VERSION "20221909.11"
 
 const char* log_server = "http://192.168.0.108:8888";
 const char* baseURL = "http://192.168.0.108:8889";
 
-App app = App(ID, log_server);
+App app = App(BOARD_ID, log_server);
 
 int previous_distance = 0;
 

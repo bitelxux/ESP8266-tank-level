@@ -5,6 +5,7 @@ ip:=192.168.0.203
 all: clean build upload
 
 build: $(name)
+	bash -c ./prepare.sh
 	arduino-cli compile --output-dir ./build --fqbn esp8266:esp8266:nodemcu  $(name)
 upload:
 	espota.py -d -i $(ip) -f "build/$(name).bin"
