@@ -23,7 +23,7 @@ def add(value):
     print(f"adding {value}")
     try:
         timestamp, value = value.split(":")
-        int_timestamp = int(timestamp)
+        int_timestamp = int(timestamp) * 1000000000
         int_value = int(value)
         body = [
           {
