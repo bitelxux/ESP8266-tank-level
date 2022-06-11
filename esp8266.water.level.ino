@@ -106,8 +106,8 @@ SoftwareSerial sensor(RX, TX);
 void flushStoredData();
 void registerNewReading();
 
-#define BOARD_ID "tank.z"
-#define VERSION "20221909.11"
+#define BOARD_ID "tank.A"
+#define VERSION "20224411.12"
 
 const char* log_server = "http://192.168.0.108:8888";
 const char* baseURL = "http://192.168.0.108:8889";
