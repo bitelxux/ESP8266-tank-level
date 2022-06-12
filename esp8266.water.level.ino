@@ -70,6 +70,12 @@ board: NodeMCU1.0 (ESP-12E Module)
 // WiFiManager parameteres
 #define SERVER_LABEL "SERVER_IP"
 
+// Reset Button
+#define RESET_BUTTON 14
+unsigned long rb_last_change = 0;
+int rb_required_time = 3;
+boolean time_to_reset = false;
+
 //flag for saving data
 bool shouldSaveConfig = false;
 
@@ -122,7 +128,7 @@ void flushStoredData();
 void registerNewReading();
 
 #define BOARD_ID "tank.A"
-#define VERSION "20220612.44"
+#define VERSION "20220612.49"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -729,6 +735,43 @@ void readConfigFile(){
   }
 }
 
+ICACHE_RAM_ATTR void resetButtonPushed() {
+
+    char buffer[20];
+    static int t0 = millis();
+    static bool armed = false;
+    
+    if (millis() - t0 < 200){
+       t0 = millis();
+       return;
+    }
+
+    if (!armed && digitalRead(RESET_BUTTON) == 0){ // pressed
+       t0 = millis();
+       armed = true;
+    }
+
+    if (armed && millis() - t0 > 10000){
+       armed = false;
+       time_to_reset = true;
+       return;
+    }
+    
+    if (digitalRead(RESET_BUTTON) == 1){ //released too soon
+       Serial.println("RESET not performed");      
+       armed = false;
+    }
+
+}
+
+void isTimeToReset(){
+  if (time_to_reset){
+    app.log("RESET button has been pressed for more than 10 seconds. Resetting WIFI and  EEPROM");
+    resetEEPROM();
+    resetWifi();
+  }
+}
+
 void setup() {
 
   Serial.begin(115200); 
@@ -737,6 +780,9 @@ void setup() {
   //Serial.println("Wifi reseted");
   //delay(5000);
   //return;
+
+  //set GPIO14 interrupt
+  attachInterrupt(digitalPinToInterrupt(RESET_BUTTON), resetButtonPushed, CHANGE);
 
   initOLED();
   EEPROM.begin(EEPROM_SIZE);
@@ -756,6 +802,7 @@ void setup() {
   app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
+  app.addTimer(1000, isTimeToReset, "isTimeToReset");
 
   readConfigFile();
   WiFiManagerParameter pserver(SERVER_LABEL, "Server IP", server, 16);
