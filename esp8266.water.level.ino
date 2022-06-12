@@ -17,7 +17,6 @@ board: NodeMCU1.0 (ESP-12E Module)
 // This is for each variable to use it's real size when stored
 // in the EEPROM
 #pragma pack(push, 1)
-
 #define SENSOR_MODE 2
 
 //EEPROM
@@ -123,7 +122,7 @@ void flushStoredData();
 void registerNewReading();
 
 #define BOARD_ID "tank.A"
-#define VERSION "20220612.41"
+#define VERSION "20220612.43"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -249,6 +248,11 @@ void updateDisplay(){
   display.setTextSize(1);             // Normal 1:1 pixel scale
   display.setTextColor(WHITE);        // Draw white text
   display.setCursor(0,18);            
+
+  display.setCursor(40,5);            
+  display.print(BOARD_ID);
+
+  display.setCursor(0,18);
   display.print("Litros: ");
   display.setCursor(46,18);            
   display.print(lastReading);
@@ -325,6 +329,8 @@ void registerNewReading(){
   int distance;
   int counter;
   char buffer[100];
+
+  return;
 
   // some attempts to read a value from sensor
   for (int i=0; i<10; i++){
