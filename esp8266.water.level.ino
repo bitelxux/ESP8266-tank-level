@@ -111,9 +111,10 @@ float MAX_VOLUME = 1000 * piR2 * (TANK_EMPTY_DISTANCE + REMAINING_WATER_HEIGHT);
 char buffer[200];
 unsigned char dataBuffer[4] = {0};
 unsigned char CS;
-int distance;
 int counter = 0; // number of registers in EEPROM
 int lastReading = 0;
+int distance =  0;
+int previous_distance = 0;
 
 SoftwareSerial sensor(RX, TX);
 
@@ -124,19 +125,15 @@ void registerNewReading();
 #define BOARD_ID "tank.A"
 #define VERSION "20223512.36"
 
+// This values  will depend on what the user configures
+// on the  WifiManager on the first connection
 char server[16];
 char log_server[30];
 char baseURL[30];
 
-//const char* log_server = "http://192.168.0.108:8888";
-//const char* baseURL = "http://192.168.0.108:8889";
-
 App app = App(BOARD_ID, log_server);
 
-int previous_distance = 0;
-
 //OLED
-
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
