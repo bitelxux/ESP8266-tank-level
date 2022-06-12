@@ -52,6 +52,7 @@ App::App(const char* ID, const char* log_server){
 
 void App::startWiFiManager(){
   //this->wifiManager->resetSettings();
+  
   this->wifiManager->autoConnect("TankLevel");
   
   IPAddress ip = WiFi.localIP();
@@ -60,6 +61,7 @@ void App::startWiFiManager(){
   this->initNTP();
   ArduinoOTA.begin();
 }
+
 
 void App::blinkLED(){
      digitalWrite(this->LED, !digitalRead(this->LED));

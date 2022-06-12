@@ -7,8 +7,11 @@ https://arduino.esp8266.com/stable/package_esp8266com_index.json
 board: NodeMCU1.0 (ESP-12E Module)
 */
 
+
 //Libraries
+#include <FS.h>
 #include <cnn.h>
+#include <ArduinoJson.h>     // 5.13.5 !!
 #include <SoftwareSerial.h>
 
 // This is for each variable to use it's real size when stored
@@ -65,6 +68,9 @@ board: NodeMCU1.0 (ESP-12E Module)
   int (*readSensor)() = &readSensor_mode2;
 #endif
 
+// WiFiManager parameteres
+#define SERVER_LABEL "SERVER_IP"
+
 typedef struct
 {
   byte flag;
@@ -107,8 +113,9 @@ void flushStoredData();
 void registerNewReading();
 
 #define BOARD_ID "tank.A"
-#define VERSION "20224411.12"
+#define VERSION "20224512.33"
 
+char server[16];
 const char* log_server = "http://192.168.0.108:8888";
 const char* baseURL = "http://192.168.0.108:8889";
 
@@ -666,6 +673,38 @@ void resetEEPROM(){
   app.log(buffer);
 }
 
+void readConfigFile(){
+  Serial.println("mounting FS...");
+
+  if (SPIFFS.begin()) {
+    Serial.println("mounted file system");
+    if (SPIFFS.exists("/config.json")) {
+      //file exists, reading and loading
+      Serial.println("reading config file");
+      File configFile = SPIFFS.open("/config.json", "r");
+      if (configFile) {
+        Serial.println("opened config file");
+        size_t size = configFile.size();
+        // Allocate a buffer to store contents of the file.
+        std::unique_ptr<char[]> buf(new char[size]);
+
+        configFile.readBytes(buf.get(), size);
+        DynamicJsonBuffer jsonBuffer;
+        JsonObject& json = jsonBuffer.parseObject(buf.get());
+        json.printTo(Serial);
+        if (json.success()) {
+          Serial.println("\nparsed json");
+          strcpy(server, json["server"]);
+        } else {
+          Serial.println("failed to load json config");
+        }
+      }
+    }
+  } else {
+    Serial.println("failed to mount FS");
+  }
+}
+
 void setup() {
 
   Serial.begin(115200); 
@@ -693,6 +732,10 @@ void setup() {
   app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
+
+  readConfigFile();
+  WiFiManagerParameter pserver(SERVER_LABEL, "Server IP", server, 16);
+  app.wifiManager->addParameter(&pserver);
 
   app.startWiFiManager();
 
