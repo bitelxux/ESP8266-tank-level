@@ -123,7 +123,7 @@ void flushStoredData();
 void registerNewReading();
 
 #define BOARD_ID "tank.A"
-#define VERSION "20223512.36"
+#define VERSION "20220612.41"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -144,6 +144,9 @@ App app = App(BOARD_ID, log_server);
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+
+// SCL is GPI05
+// SDA is GPI04
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 static const unsigned char PROGMEM wifi_bmp[] = 
@@ -255,6 +258,9 @@ void updateDisplay(){
   display.print("Local: ");
   display.setCursor(46,26);            
   display.print(counter);
+
+  display.setCursor(0,48);            
+  display.print(VERSION);
 
   display.setCursor(0,56);            
   display.print(app.IP);
