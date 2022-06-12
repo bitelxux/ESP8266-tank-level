@@ -34,7 +34,7 @@ def add(value):
               }
           }
         ]
-        client.write_points(body, time_precision='s')
+        client.write_points(body)
         return f"The value {value} has been gladly added"
     except:
         return f"Error adding {value}"
