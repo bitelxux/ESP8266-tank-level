@@ -71,6 +71,15 @@ board: NodeMCU1.0 (ESP-12E Module)
 // WiFiManager parameteres
 #define SERVER_LABEL "SERVER_IP"
 
+//flag for saving data
+bool shouldSaveConfig = false;
+
+//callback notifying us of the need to save config
+void saveConfigCallback () {
+  Serial.println("Should save config");
+  shouldSaveConfig = true;
+}
+
 typedef struct
 {
   byte flag;
@@ -113,11 +122,14 @@ void flushStoredData();
 void registerNewReading();
 
 #define BOARD_ID "tank.A"
-#define VERSION "20224512.33"
+#define VERSION "20223512.36"
 
 char server[16];
-const char* log_server = "http://192.168.0.108:8888";
-const char* baseURL = "http://192.168.0.108:8889";
+char log_server[30];
+char baseURL[30];
+
+//const char* log_server = "http://192.168.0.108:8888";
+//const char* baseURL = "http://192.168.0.108:8889";
 
 App app = App(BOARD_ID, log_server);
 
@@ -735,9 +747,40 @@ void setup() {
 
   readConfigFile();
   WiFiManagerParameter pserver(SERVER_LABEL, "Server IP", server, 16);
+
+  //set config save notify callback
+  app.wifiManager->setSaveConfigCallback(saveConfigCallback);
   app.wifiManager->addParameter(&pserver);
 
   app.startWiFiManager();
+
+  strcpy(server, pserver.getValue());
+
+  sprintf(log_server, "http://%s:8888", server);
+  sprintf(baseURL, "http://%s:8889", server);
+
+  sprintf(buffer, "log_server is %s", log_server);
+  Serial.println(buffer);
+  sprintf(buffer, "app_server is %s", baseURL);
+  Serial.println(buffer);
+
+  //save the custom parameters to FS
+  if (shouldSaveConfig) {
+    Serial.println("saving config");
+    DynamicJsonBuffer jsonBuffer;
+    JsonObject& json = jsonBuffer.createObject();
+    json["server"] = server;
+
+    File configFile = SPIFFS.open("/config.json", "w");
+    if (!configFile) {
+      Serial.println("failed to open config file for writing");
+    }
+
+    json.printTo(Serial);
+    json.printTo(configFile);
+    configFile.close();
+    //end save
+  }
 
   delay(5000); // wait for sensor to settle
   registerNewReading();
