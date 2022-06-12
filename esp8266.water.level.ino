@@ -122,7 +122,7 @@ void flushStoredData();
 void registerNewReading();
 
 #define BOARD_ID "tank.A"
-#define VERSION "20220612.43"
+#define VERSION "20220612.44"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -207,6 +207,9 @@ void drawTank(){
   int innerX = outerX + 2;
   int innerY = outerY + 2 + outerHeight - innerHeight - 4;
   display.fillRoundRect(innerX, innerY, innerWidth, innerHeight, 4, 1);
+
+  // flat surface
+  display.fillRect(innerX, innerY, innerWidth, 4, 1);
 
 }
 
