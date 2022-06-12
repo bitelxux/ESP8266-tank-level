@@ -1,7 +1,7 @@
 #!/bin/bash
 
 name=esp8266.water.level.ino
-today=$(date  +"%Y%M%d")
+today=$(date  +"%Y%m%d")
 
 source config
 new_build=$((BUILD+1))
