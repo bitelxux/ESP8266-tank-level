@@ -127,8 +127,8 @@ SoftwareSerial sensor(RX, TX);
 void flushStoredData();
 void registerNewReading();
 
-#define BOARD_ID "tank.A"
-#define VERSION "20220612.49"
+#define BOARD_ID "tank.Z"
+#define VERSION "20220626.50"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -338,8 +338,6 @@ void registerNewReading(){
   int distance;
   int counter;
   char buffer[100];
-
-  return;
 
   // some attempts to read a value from sensor
   for (int i=0; i<10; i++){
@@ -772,6 +770,10 @@ void isTimeToReset(){
   }
 }
 
+void test(){
+  app.log("funciona!!");
+}
+
 void setup() {
 
   Serial.begin(115200); 
@@ -802,6 +804,7 @@ void setup() {
   app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
+  app.addTimer(1000, test, "test");
   app.addTimer(1000, isTimeToReset, "isTimeToReset");
 
   readConfigFile();
