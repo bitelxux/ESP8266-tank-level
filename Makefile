@@ -1,6 +1,6 @@
 name:=esp8266.water.level.ino
 port:=/dev/ttyUSB0
-ip:=192.168.0.101
+ip:=192.168.0.203
 
 all: clean build upload
 

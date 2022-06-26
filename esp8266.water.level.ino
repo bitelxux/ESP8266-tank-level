@@ -128,7 +128,7 @@ void flushStoredData();
 void registerNewReading();
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20220626.50"
+#define VERSION "20220626.56"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -770,10 +770,6 @@ void isTimeToReset(){
   }
 }
 
-void test(){
-  app.log("funciona!!");
-}
-
 void setup() {
 
   Serial.begin(115200); 
@@ -804,7 +800,6 @@ void setup() {
   app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
   app.addTimer(1000, todo, "todo");
-  app.addTimer(1000, test, "test");
   app.addTimer(1000, isTimeToReset, "isTimeToReset");
 
   readConfigFile();
