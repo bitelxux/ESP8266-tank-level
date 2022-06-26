@@ -14,6 +14,8 @@ board: NodeMCU1.0 (ESP-12E Module)
 #include <ArduinoJson.h>     // 5.13.5 !!
 #include <SoftwareSerial.h>
 
+#include <ESP8266WebServer.h>
+
 // This is for each variable to use it's real size when stored
 // in the EEPROM
 #pragma pack(push, 1)
@@ -127,8 +129,10 @@ SoftwareSerial sensor(RX, TX);
 void flushStoredData();
 void registerNewReading();
 
-#define BOARD_ID "tank.Z"
-#define VERSION "20220626.56"
+ESP8266WebServer restServer(80);
+
+#define BOARD_ID "tank.A"
+#define VERSION "20220626.79"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -338,6 +342,8 @@ void registerNewReading(){
   int distance;
   int counter;
   char buffer[100];
+
+  return;
 
   // some attempts to read a value from sensor
   for (int i=0; i<10; i++){
@@ -699,6 +705,8 @@ void resetEEPROM(){
 
   sprintf(buffer, "EEPROM deleted in %d milliseconds", t2 - t0);
   app.log(buffer);
+
+  restServer.send(200, "text/plain", buffer);
 }
 
 void readConfigFile(){
@@ -770,6 +778,48 @@ void isTimeToReset(){
   }
 }
 
+// Serving Hello world
+void getHelloWord() {
+    restServer.send(200, "text/json", "{\"name\": \"Hello world\"}");
+}
+
+void boardID() {
+    sprintf(buffer, "%s\n", BOARD_ID);
+    restServer.send(200, "text/plain", buffer);
+}
+
+void version() {
+    sprintf(buffer, "%s\n", VERSION);
+    restServer.send(200, "text/plain", buffer);
+}
+ 
+// Define routing
+void restServerRouting() {
+    restServer.on("/", HTTP_GET, []() {
+        restServer.send(200, F("text/html"),
+            F("Welcome to the REST Web Server"));
+    });
+    restServer.on(F("/helloWorld"), HTTP_GET, getHelloWord);
+    restServer.on(F("/boardID"), HTTP_GET, boardID);
+    restServer.on(F("/version"), HTTP_GET, version);
+    restServer.on(F("/resetEEPROM"), HTTP_GET, resetEEPROM);
+}
+
+void handleNotFound() {
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += restServer.uri();
+  message += "\nMethod: ";
+  message += (restServer.method() == HTTP_GET) ? "GET" : "POST";
+  message += "\nArguments: ";
+  message += restServer.args();
+  message += "\n";
+  for (uint8_t i = 0; i < restServer.args(); i++) {
+    message += " " + restServer.argName(i) + ": " + restServer.arg(i) + "\n";
+  }
+  restServer.send(404, "text/plain", message);
+}
+
 void setup() {
 
   Serial.begin(115200); 
@@ -799,7 +849,6 @@ void setup() {
   app.addTimer(30 * 1000, flushStoredData, "flushStoredData");
   app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app.addTimer(1000, updateDisplay, "updateDisplay");
-  app.addTimer(1000, todo, "todo");
   app.addTimer(1000, isTimeToReset, "isTimeToReset");
 
   readConfigFile();
@@ -839,6 +888,14 @@ void setup() {
     //end save
   }
 
+  // Set server routing
+  restServerRouting();
+  // Set not found response
+  restServer.onNotFound(handleNotFound);
+  // Start server
+  restServer.begin();
+  Serial.println("HTTP server started");
+
   delay(5000); // wait for sensor to settle
   registerNewReading();
 }
@@ -849,14 +906,7 @@ void resetWifi(){
   ESP.restart();
 }
 
-void todo(){
-  sprintf(buffer, "%s/todo", baseURL);
-  String todo = app.get(buffer);
-
-  if (todo == "reset eeprom") resetEEPROM();
-  if (todo == "forget wifis") resetWifi();
-}
-
 void loop() {
   app.attendTimers();
+  restServer.handleClient();
 }
