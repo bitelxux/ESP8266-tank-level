@@ -50,7 +50,7 @@ class Timer{
 
 class Log{
     public:
-	    App* app;
+        App* app;
         const char* server;
         const char* ID;
 
@@ -61,10 +61,10 @@ class Log{
 class App{
     public:
 
-    const char* ID;
-    const char* log_server;
-    const char* SSID;
-    const char* password;
+    const char* ID = NULL;
+    const char* log_server = NULL;
+    const char* SSID = NULL;
+    const char* password = NULL;
     int LED = 2;
     char IP[16];
     unsigned long tLastConnectionAttempt = 0;

@@ -184,16 +184,20 @@ void App::handleOTA(){
 
 bool App::send(String what){
 
+  bool result;
+
   if (WiFi.status() != WL_CONNECTED){
     return false;
   }
 
-  bool result;
   WiFiClient client;
   HTTPClient http;
   //Serial.print("sending ");
   //Serial.println(what.c_str());
   http.begin(client, what.c_str());
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("device_id", this->ID);
+
   int httpResponseCode = http.GET();
 
   if (httpResponseCode == 200){
@@ -204,10 +208,11 @@ bool App::send(String what){
         Serial.println(httpResponseCode);
         result = false;
       }
-      // Free resources
-      http.end();
 
-      return result;
+  // Free resources
+  http.end();
+
+  return result;
 }
 
 String App::get(String what){

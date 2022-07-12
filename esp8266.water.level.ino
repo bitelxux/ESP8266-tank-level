@@ -78,6 +78,8 @@ unsigned long rb_last_change = 0;
 int rb_required_time = 3;
 boolean time_to_reset = false;
 
+App *app = NULL;
+
 //flag for saving data
 bool shouldSaveConfig = false;
 
@@ -131,8 +133,8 @@ void registerNewReading();
 
 ESP8266WebServer restServer(80);
 
-#define BOARD_ID "tank.A"
-#define VERSION "20220626.79"
+const char* BOARD_ID = "tank.A";
+const char* VERSION = "20220711.101";
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -140,7 +142,6 @@ char server[16];
 char log_server[30];
 char baseURL[30];
 
-App app = App(BOARD_ID, log_server);
 
 //OLED
 #include <SPI.h>
@@ -280,7 +281,7 @@ void updateDisplay(){
   display.print(VERSION);
 
   display.setCursor(0,56);            
-  display.print(app.IP);
+  display.print(app->IP);
 
   display.display();
 }
@@ -335,7 +336,7 @@ int mobileAverage(int value)
 bool isServerAlive(){
     sprintf(buffer, "%s/ping", baseURL);
     Serial.println(buffer);
-    return (app.send(buffer));
+    return (app->send(buffer));
 }
 
 void registerNewReading(){
@@ -355,23 +356,23 @@ void registerNewReading(){
   }
 
   if (distance == -1){
-    app.log("Error reading value from sensor");
+    app->log("Error reading value from sensor");
     return;
   }
 
   int litres = calcLitres(distance);
   lastReading = litres;
 
-  unsigned long now = app.getEpochSeconds();
+  unsigned long now = app->getEpochSeconds();
   if (now){
     sprintf(buffer, "%s/add/%d:%d", baseURL, now, litres);
 
     // try to send to the server
     // if fails, store locally for further retrying
-    if (app.send(buffer)){
+    if (app->send(buffer)){
       drawSend();
       sprintf(buffer, "Sent %d:%d", now, litres);
-      app.log(buffer);
+      app->log(buffer);
     }
     else{
       drawStore();
@@ -380,7 +381,7 @@ void registerNewReading(){
         
   }
   else{
-      app.log("Warning: Not handling reading as time is not updated");
+      app->log("Warning: Not handling reading as time is not updated");
   }
 
 }
@@ -396,7 +397,7 @@ int readSensor_mode1(){
     int mm = t/(29.2*2)*10;
 
     //sprintf(buffer, "duration was %d. mm was %d", t, mm);
-    //app.log(buffer);
+    //app->log(buffer);
 
     // wrong reading
     if (t == 0){
@@ -430,19 +431,19 @@ int readSensor_mode2(){
        }
     
        //sprintf(buffer, "lectura: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-       //app.log(buffer);
+       //app->log(buffer);
     
        CS = dataBuffer[0] + dataBuffer[1] + dataBuffer[2];
     
        if (dataBuffer[3] == CS){
          distance = (dataBuffer[1] << 8) + dataBuffer[2];
          //sprintf(buffer, "lectura: %d", distance);
-         //app.log(buffer);
+         //app->log(buffer);
          return mobileAverage(distance);
        }
        else{
          sprintf(buffer, "CS Error: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-         app.log(buffer);
+         app->log(buffer);
          return -1;
        }
    }
@@ -466,17 +467,17 @@ void flushStoredData(){
   // You have to start server.py at BASE_URL
   if (!isServerAlive()){
     sprintf(buffer, "[FLUSH_STORED_DATA] Server doesn't respond. I'll try later.");
-    app.log(buffer);
+    app->log(buffer);
     return;
   }
 
   if (WiFi.status() != WL_CONNECTED){
-    app.log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the WIFI :-/.");
+    app->log("[FLUSH_STORED_DATA] Skipping. I'm not connected to the WIFI :-/.");
     return;
   }
 
   if (counter == 0){
-      app.log("[FLUSH_STORED_DATA] Nothing to send");
+      app->log("[FLUSH_STORED_DATA] Nothing to send");
       return;
   }
 
@@ -502,13 +503,13 @@ void flushStoredData(){
       recNum = (regAddress - RECORDS_BASE_ADDRESS)/regSize;
       sprintf(buffer, "%s/add/%d:%d", baseURL, reading.timestamp, reading.value);
 
-      if (!app.send(buffer)){
+      if (!app->send(buffer)){
         sprintf(buffer, "[FLUSH_STORED_DATA] Error sending record [%d]", recNum);
-        app.log(buffer);
+        app->log(buffer);
         errors = true;
         if (!isServerAlive()){
           sprintf(buffer, "[FLUSH_STORED_DATA] Server doesn't respond. I'll try later.");
-          app.log(buffer);
+          app->log(buffer);
           break;
         }
 
@@ -520,7 +521,7 @@ void flushStoredData(){
         sent ++;
         
         sprintf(buffer, "[FLUSH_STORED_DATA] Success sending record [%d] (%d left)", recNum, readCounter());
-        app.log(buffer);
+        app->log(buffer);
 
         // We don't want to write the whole struct to save write cycles
         flag = REC_FLUSHED;
@@ -544,7 +545,7 @@ void flushStoredData(){
       sprintf(buffer, "[FLUSH_STORED_DATA] %d records sent [errors]", sent);    
   }
   
-  app.log(buffer);
+  app->log(buffer);
 
 }
 
@@ -618,18 +619,18 @@ void writeCounter(unsigned short int counter){
     // moving to the next slot
 
     //sprintf(buffer, "Counter slot %d reaching the limit of %d writings", counterSlot, MAX_WRITES);
-    //app.log(buffer);
+    //app->log(buffer);
 
     if (counterSlot <  COUNTER_SLOTS){
         counterSlot ++;
         counterAddress += 4; // each counter is 2 byte for n of writes + 2 bytes for the counter
         sprintf(buffer, "Counter slot moved to slot %d", counterSlot);
-        app.log(buffer);
+        app->log(buffer);
     }
     else{
         sprintf(buffer, "WARNING. Counter slots exhausted. Resetting to slot 1. Writes might start to fail soon");
         addWarning(WARNING_COUNTER_SLOTS_ROTATED);
-        app.log(buffer);
+        app->log(buffer);
         counterSlot = 1;
         counterAddress = 1;
     }
@@ -643,10 +644,10 @@ void writeCounter(unsigned short int counter){
   EEPROM.put(counterAddress + 2, counter);
   
   //sprintf(buffer, "counter slot: %d, numwrites: %d", counterSlot, counterWrites+1);
-  //app.log(buffer);
+  //app->log(buffer);
 
   if (!EEPROM.commit()) {
-    app.log("Commit failed writing counter changes");
+    app->log("Commit failed writing counter changes");
   }
 }
 
@@ -657,11 +658,11 @@ int writeReading(unsigned long in_timestamp, short int in_value){
   unsigned short int counter = readCounter();
  
   //sprintf(buffer, "writeReading %d %d", counter, MAX_RECORDS);
-  //app.log(buffer);
+  //app->log(buffer);
 
   if (counter >= MAX_RECORDS){
     addWarning(WARNING_STORAGE_IS_FULL);
-    app.log("WARNING. Local storage is full");
+    app->log("WARNING. Local storage is full");
     return -1;
   }
 
@@ -684,7 +685,7 @@ int writeReading(unsigned long in_timestamp, short int in_value){
         EEPROM.commit();
         counter = incCounter();        
         sprintf(buffer, "Locally stored [%d of %d] %d:%d", counter, MAX_RECORDS, in_timestamp, in_value);
-        app.log(buffer);
+        app->log(buffer);
         break;
       }      
   }  
@@ -704,7 +705,7 @@ void resetEEPROM(){
   int t2=millis();
 
   sprintf(buffer, "EEPROM deleted in %d milliseconds", t2 - t0);
-  app.log(buffer);
+  app->log(buffer);
 
   restServer.send(200, "text/plain", buffer);
 }
@@ -772,7 +773,7 @@ ICACHE_RAM_ATTR void resetButtonPushed() {
 
 void isTimeToReset(){
   if (time_to_reset){
-    app.log("RESET button has been pressed for more than 10 seconds. Resetting WIFI and  EEPROM");
+    app->log("RESET button has been pressed for more than 10 seconds. Resetting WIFI and  EEPROM");
     resetEEPROM();
     resetWifi();
   }
@@ -822,9 +823,11 @@ void handleNotFound() {
 
 void setup() {
 
+  app = new App(BOARD_ID, log_server);
+
   Serial.begin(115200); 
 
-  //app.wifiManager->resetSettings();
+  //app->wifiManager->resetSettings();
   //Serial.println("Wifi reseted");
   //delay(5000);
   //return;
@@ -846,19 +849,19 @@ void setup() {
       delayMicroseconds(500);  
   }
 
-  app.addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app.addTimer(60 * 1000, registerNewReading, "registerNewReading");
-  app.addTimer(1000, updateDisplay, "updateDisplay");
-  app.addTimer(1000, isTimeToReset, "isTimeToReset");
+  app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
+  app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
+  app->addTimer(1000, updateDisplay, "updateDisplay");
+  app->addTimer(1000, isTimeToReset, "isTimeToReset");
 
   readConfigFile();
   WiFiManagerParameter pserver(SERVER_LABEL, "Server IP", server, 16);
 
   //set config save notify callback
-  app.wifiManager->setSaveConfigCallback(saveConfigCallback);
-  app.wifiManager->addParameter(&pserver);
+  app->wifiManager->setSaveConfigCallback(saveConfigCallback);
+  app->wifiManager->addParameter(&pserver);
 
-  app.startWiFiManager();
+  app->startWiFiManager();
 
   strcpy(server, pserver.getValue());
 
@@ -901,12 +904,12 @@ void setup() {
 }
 
 void resetWifi(){
-  app.log("reset WIFI networks");
-  app.wifiManager->resetSettings();
+  app->log("reset WIFI networks");
+  app->wifiManager->resetSettings();
   ESP.restart();
 }
 
 void loop() {
-  app.attendTimers();
+  app->attendTimers();
   restServer.handleClient();
 }
