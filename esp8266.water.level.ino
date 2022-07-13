@@ -344,8 +344,6 @@ void registerNewReading(){
   int counter;
   char buffer[100];
 
-  return;
-
   // some attempts to read a value from sensor
   for (int i=0; i<10; i++){
       distance = readSensor();
@@ -850,7 +848,7 @@ void setup() {
   }
 
   app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
+  app->addTimer(5 * 1000, registerNewReading, "registerNewReading");
   app->addTimer(1000, updateDisplay, "updateDisplay");
   app->addTimer(1000, isTimeToReset, "isTimeToReset");
 

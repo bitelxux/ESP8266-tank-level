@@ -3,7 +3,7 @@
 import os
 
 from influxdb import InfluxDBClient
-from flask import Flask, Markup, render_template, abort
+from flask import Flask, Markup, render_template, abort, request
 
 client = InfluxDBClient(host='influxdb', port=8086, username='admin', password='admin')
 client.switch_database('tank')
@@ -20,7 +20,8 @@ def ping():
 
 @app.route('/add/<string:value>')
 def add(value):
-    print(f"adding {value}")
+    id = request.headers.get('device_id')
+    print(f"adding {id}:{value}")
     try:
         timestamp, value = value.split(":")
         int_timestamp = int(timestamp) * 1000000000
@@ -30,6 +31,7 @@ def add(value):
               "measurement": "readings",
               "time": int_timestamp,
               "fields": {
+                  "device_id": id,
                   "value": int_value
               }
           }
@@ -38,16 +40,6 @@ def add(value):
         return f"The value {value} has been gladly added"
     except:
         return f"Error adding {value}"
-
-@app.route('/todo')
-def todo():
-    try:
-        task = open("todo").read()[:-1];
-        os.system("rm -f todo")
-    except:
-        task = "nothing"
-
-    return task
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8889, threaded=True)
