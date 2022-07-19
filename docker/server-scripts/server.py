@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import os
+import statistics as stats
 
 from influxdb import InfluxDBClient
 from flask import Flask, Markup, render_template, abort, request
@@ -18,14 +19,31 @@ def main():
 def ping():
      return "pong"
 
+def is_outlier(new_value):
+    result = client.query("select * from readings ORDER BY time DESC LIMIT 10")
+    readings = list(result.get_points(measurement='readings'))
+    values =  [reading['value'] for reading in readings]
+
+    std = stats.stdev(values)
+    mean = stats.mean(values)
+
+    if abs(new_value - mean) > 2*std:
+        return True
+
 @app.route('/add/<string:value>')
 def add(value):
+
     id = request.headers.get('device_id')
     print(f"adding {id}:{value}")
     try:
         timestamp, value = value.split(":")
         int_timestamp = int(timestamp) * 1000000000
         int_value = int(value)
+
+        if is_outlier(int_value):
+            print(f"{int_value} seems to be an outlier")
+            return(f"{int_value} seems to be an outlier")
+
         body = [
           {
               "measurement": "readings",
@@ -43,4 +61,3 @@ def add(value):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8889, threaded=True)
-

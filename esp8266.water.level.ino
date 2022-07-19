@@ -133,8 +133,8 @@ void registerNewReading();
 
 ESP8266WebServer restServer(80);
 
-const char* BOARD_ID = "tank.A";
-const char* VERSION = "20220711.101";
+#define BOARD_ID "tank.Z"
+#define VERSION "20220718.119"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -325,6 +325,11 @@ void appendToBuffer(short int value)
 
 int mobileAverage(int value)
 {
+  // try not to do movile average
+  // it's done in grafana
+
+  return value;
+
   sum -= *circularBufferAccessor;
   sum += value;
   appendToBuffer(value);
@@ -848,7 +853,7 @@ void setup() {
   }
 
   app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app->addTimer(5 * 1000, registerNewReading, "registerNewReading");
+  app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app->addTimer(1000, updateDisplay, "updateDisplay");
   app->addTimer(1000, isTimeToReset, "isTimeToReset");
 
