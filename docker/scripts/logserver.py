@@ -8,7 +8,7 @@ import logging
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-logfile = "/server-scripts/robotits.log"
+logfile = "/water_tank/robotits.log"
 
 app = Flask(__name__)
 
