@@ -173,7 +173,14 @@ bool App::updateNTP(){
 
 // For timer
 void App::voidUpdateNTP(){
-  timeClient.update();
+  if (timeClient.update()){
+      this->tEpoch = timeClient.getEpochTime();
+      this->tEpochOffset = millis();
+  }
+  else
+  {
+      this->log("Error updating NTP time");
+  }
 }
 
 unsigned long App::getEpochSeconds(){
