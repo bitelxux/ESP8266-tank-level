@@ -69,14 +69,15 @@ class App{
     char IP[16];
     unsigned long tLastConnectionAttempt = 0;
     unsigned long tConnect = 0;
-    
-    WiFiManager *wifiManager = NULL;
+
+    // for NTP
+    unsigned long tEpoch = 0;
+    unsigned long tEpochOffset = 0;
     
     Timer* timers = NULL;
-    
     Log* logger;
-    
     App(const char* ID, const char* server);
+    WiFiManager *wifiManager = NULL;
     
     void initNTP();
     void addTimer(int millis, AppCallback function, char* name);
@@ -89,6 +90,8 @@ class App{
     void handleOTA();
     void blinkLED();
     void startWiFiManager();
+    bool updateNTP();
+    void voidUpdateNTP();
     unsigned long getEpochSeconds();
 };
 

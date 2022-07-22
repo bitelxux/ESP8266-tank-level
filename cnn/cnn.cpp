@@ -40,7 +40,7 @@ App::App(const char* ID, const char* log_server){
     this->addTimer(60000, &App::imAlive, "imAlive");
     this->addTimer(1000, &App::handleOTA, "handleOTA");
     this->addTimer(1000, &App::blinkLED, "blinkLED");
-    // this->addTimer(60 * 1000, &App::initNTP, "initNTP");
+    this->addTimer(60 * 1000, &App::voidUpdateNTP, "voidUpdateNTP");
 
     pinMode(LED, OUTPUT);
 
@@ -90,6 +90,7 @@ void App::addTimer(int millis, AppCallback function, char*name){
 
 	timer->next = newTimer;
 }
+
 
 void App::addTimer(int millis, function_callback function, char*name){
 
@@ -141,7 +142,6 @@ void App::attendTimers(){
     }
 }
 
-
 void App::initNTP(){
 
   char buffer[50];
@@ -154,23 +154,35 @@ void App::initNTP(){
   // GMT -1 = -3600
   // GMT 0 = 0
   timeClient.setTimeOffset(0);
-  if (timeClient.update()){
-      this->log("NTP synced");
-  }
-  else{
-      this->log("ERROR: NTP failed to sync");
-  }
+  this->updateNTP();
     
 }
 
-unsigned long App::getEpochSeconds(){
+bool App::updateNTP(){
   if (timeClient.update()){
-      return timeClient.getEpochTime();
+      this->tEpoch = timeClient.getEpochTime();
+      this->tEpochOffset = millis();
+      return true;
   }
   else
   {
       this->log("Error updating NTP time");
-      return 0;
+      return false;
+  }
+}
+
+// For timer
+void App::voidUpdateNTP(){
+  timeClient.update();
+}
+
+unsigned long App::getEpochSeconds(){
+  if (this->tEpoch){
+   return this->tEpoch - this->tEpochOffset + millis();
+  }
+  else
+  {
+    return 0;
   }
 }
 
