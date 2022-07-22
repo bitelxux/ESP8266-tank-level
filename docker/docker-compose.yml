@@ -16,11 +16,11 @@ services:
     hostname: server
     restart: always
     volumes:
-      - ./server-scripts:/server-scripts
+      - ./scripts:/water_tank
     ports:
       - 8888:8888
       - 8889:8889
-    command: /server-scripts/start.sh
+    command: /water_tank/start.sh
     restart: always
   grafana:
     image: grafana/grafana:latest
