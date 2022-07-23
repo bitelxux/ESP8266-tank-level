@@ -184,12 +184,11 @@ void App::voidUpdateNTP(){
 }
 
 unsigned long App::getEpochSeconds(){
-  if (this->tEpoch){
-   return this->tEpoch - this->tEpochOffset + millis();
+  if (timeClient.update()){
+      return timeClient.getEpochTime();
   }
-  else
-  {
-    return 0;
+  else{
+      return 0;
   }
 }
 
