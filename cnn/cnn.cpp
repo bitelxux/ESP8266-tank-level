@@ -163,7 +163,7 @@ void App::updateNTP(){
   if (timeClient.update()){
       this->tEpoch = timeClient.getEpochTime();
       this->tEpochOffset = millis()/1000;
-      sprintf(buffer, "NTP Updated [$d, %d]", this->tEpoch, this->tEpochOffset); 
+      sprintf(buffer, "NTP Updated [%d, %d]", this->tEpoch, this->tEpochOffset); 
       this->log(buffer);
   }
   else
