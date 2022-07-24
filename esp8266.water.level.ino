@@ -27,6 +27,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 #define COUNTER_SLOTS 10
 
 #define CURRENT_COUNTER_SLOT_ADDRESS 0   // 1 byte
+#define BOOTS_ADDRESS 1                  // 2 byte
 #define MAX_WRITES 100000                // theorically 10000
 #define WARNINGS_ADDRESS 1               // bitmap supporting 8 predefined warnings
 
@@ -133,8 +134,8 @@ void registerNewReading();
 
 ESP8266WebServer restServer(80);
 
-#define BOARD_ID "tank.Z"
-#define VERSION "20220724.156"
+#define BOARD_ID "tank.A"
+#define VERSION "20220724.165"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -796,6 +797,18 @@ void version() {
     sprintf(buffer, "%s\n", VERSION);
     restServer.send(200, "text/plain", buffer);
 }
+
+void boots() {
+    sprintf(buffer, "%d\n", readBoots());
+    restServer.send(200, "text/plain", buffer);
+}
+
+void reboot() {
+    app->log("Board is going to reboot");
+    restServer.send(200, "text/plain", "OK\n");
+    delay(2000);
+    ESP.restart();
+}
  
 // Define routing
 void restServerRouting() {
@@ -806,6 +819,8 @@ void restServerRouting() {
     restServer.on(F("/helloWorld"), HTTP_GET, getHelloWord);
     restServer.on(F("/boardID"), HTTP_GET, boardID);
     restServer.on(F("/version"), HTTP_GET, version);
+    restServer.on(F("/boots"), HTTP_GET, boots);
+    restServer.on(F("/reboot"), HTTP_GET, reboot);
     restServer.on(F("/resetEEPROM"), HTTP_GET, resetEEPROM);
 }
 
@@ -822,6 +837,20 @@ void handleNotFound() {
     message += " " + restServer.argName(i) + ": " + restServer.arg(i) + "\n";
   }
   restServer.send(404, "text/plain", message);
+}
+
+unsigned short readBoots(){
+    unsigned short boots;
+    EEPROM.get(BOOTS_ADDRESS, boots);
+    return boots;
+}
+
+int incBoots(){
+  unsigned short boots = readBoots();
+  boots ++;
+  EEPROM.write(BOOTS_ADDRESS, boots);
+  EEPROM.commit(); 
+  return boots;
 }
 
 void setup() {
@@ -901,6 +930,11 @@ void setup() {
   // Start server
   restServer.begin();
   Serial.println("HTTP server started");
+
+  unsigned short boots = incBoots();
+  sprintf(buffer, "boot: %d", boots);
+  Serial.println(buffer);
+  app->log(buffer);
 
   delay(5000); // wait for sensor to settle
   registerNewReading();
