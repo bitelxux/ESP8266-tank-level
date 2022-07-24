@@ -40,7 +40,7 @@ App::App(const char* ID, const char* log_server){
     this->addTimer(60000, &App::imAlive, "imAlive");
     this->addTimer(1000, &App::handleOTA, "handleOTA");
     this->addTimer(1000, &App::blinkLED, "blinkLED");
-    this->addTimer(60 * 1000, &App::voidUpdateNTP, "voidUpdateNTP");
+    this->addTimer(60 * 1000, &App::updateNTP, "updateNTP");
 
     pinMode(LED, OUTPUT);
 
@@ -158,26 +158,13 @@ void App::initNTP(){
     
 }
 
-bool App::updateNTP(){
+void App::updateNTP(){
   char buffer[100];
   if (timeClient.update()){
       this->tEpoch = timeClient.getEpochTime();
       this->tEpochOffset = millis()/1000;
-      return true;
-  }
-  else
-  {
-      this->log("Error updating NTP time");
-      return false;
-  }
-}
-
-// For timer
-void App::voidUpdateNTP(){
-  char buffer[100];
-  if (timeClient.update()){
-      this->tEpoch = timeClient.getEpochTime();
-      this->tEpochOffset = millis()/1000;
+      sprintf(buffer, "NTP Updated [$d, %d]", this->tEpoch, this->tEpochOffset); 
+      this->log(buffer);
   }
   else
   {

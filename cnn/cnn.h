@@ -90,8 +90,7 @@ class App{
     void handleOTA();
     void blinkLED();
     void startWiFiManager();
-    bool updateNTP();
-    void voidUpdateNTP();
+    void updateNTP();
     unsigned long getEpochSeconds();
 };
 
