@@ -19,16 +19,12 @@ def main():
 def ping():
      return "pong"
 
-def is_outlier(new_value):
-    result = client.query("select * from readings ORDER BY time DESC LIMIT 10")
+def is_outlier(new_value, timestamp):
+    result = client.query(f"SELECT * FROM readings WHERE time <= {timestamp} ORDER BY time DESC LIMIT 1")
     readings = list(result.get_points(measurement='readings'))
     values =  [reading['value'] for reading in readings]
 
-    std = stats.stdev(values)
-    mean = stats.mean(values)
-
-    if abs(new_value - mean) > 2*std:
-        return True
+    return values && abs(new_value - values[0]) > 150:
 
 @app.route('/add/<string:value>')
 def add(value):
@@ -40,7 +36,7 @@ def add(value):
         int_timestamp = int(timestamp) * 1000000000
         int_value = int(value)
 
-        if is_outlier(int_value):
+        if is_outlier(int_value, int_timestamp):
             print(f"{int_value} seems to be an outlier")
             return(f"{int_value} seems to be an outlier")
 

@@ -134,7 +134,7 @@ void registerNewReading();
 ESP8266WebServer restServer(80);
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20220724.155"
+#define VERSION "20220724.156"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
