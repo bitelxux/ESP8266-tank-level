@@ -159,9 +159,10 @@ void App::initNTP(){
 }
 
 bool App::updateNTP(){
+  char buffer[100];
   if (timeClient.update()){
       this->tEpoch = timeClient.getEpochTime();
-      this->tEpochOffset = millis();
+      this->tEpochOffset = millis()/1000;
       return true;
   }
   else
@@ -173,9 +174,10 @@ bool App::updateNTP(){
 
 // For timer
 void App::voidUpdateNTP(){
+  char buffer[100];
   if (timeClient.update()){
       this->tEpoch = timeClient.getEpochTime();
-      this->tEpochOffset = millis();
+      this->tEpochOffset = millis()/1000;
   }
   else
   {
@@ -184,8 +186,8 @@ void App::voidUpdateNTP(){
 }
 
 unsigned long App::getEpochSeconds(){
-  if (timeClient.update()){
-      return timeClient.getEpochTime();
+  if (this->tEpoch){
+      return this->tEpoch + millis()/1000 - this->tEpochOffset;
   }
   else{
       return 0;

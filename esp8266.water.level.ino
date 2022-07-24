@@ -133,8 +133,8 @@ void registerNewReading();
 
 ESP8266WebServer restServer(80);
 
-#define BOARD_ID "tank.Z"
-#define VERSION "20220722.141"
+#define BOARD_ID "tank.A"
+#define VERSION "20220724.149"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -384,7 +384,7 @@ void registerNewReading(){
         
   }
   else{
-      app->log("Warning: Not handling reading as time is not updated");
+      app->log("Warning: Not handling reading as time is not synced");
   }
 
 }
@@ -853,7 +853,7 @@ void setup() {
   }
 
   app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
+  app->addTimer(5 * 1000, registerNewReading, "registerNewReading");
   app->addTimer(1000, updateDisplay, "updateDisplay");
   app->addTimer(1000, isTimeToReset, "isTimeToReset");
 
