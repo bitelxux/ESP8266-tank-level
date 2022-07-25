@@ -135,7 +135,7 @@ void registerNewReading();
 ESP8266WebServer restServer(80);
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20220725.169"
+#define VERSION "20220725.170"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -821,7 +821,7 @@ void  restReadWarnings(){
     restServer.send(200, "text/plain", buffer);
 }
 
-void  restRemoveWarnings(){
+void clearWarnings(){
     removeWarnings();
     restServer.send(200, "text/plain", "OK\n");
 }
@@ -839,7 +839,7 @@ void restServerRouting() {
     restServer.on(F("/reboot"), HTTP_GET, reboot);
     restServer.on(F("/resetEEPROM"), HTTP_GET, resetEEPROM);
     restServer.on(F("/warnings"), HTTP_GET, restReadWarnings);
-    restServer.on(F("/remove_warnings"), HTTP_GET, restRemoveWarnings);
+    restServer.on(F("/warnings/clear"), HTTP_GET, clearWarnings);
 }
 
 void handleNotFound() {
