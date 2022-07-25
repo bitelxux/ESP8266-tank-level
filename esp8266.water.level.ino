@@ -27,9 +27,9 @@ board: NodeMCU1.0 (ESP-12E Module)
 #define COUNTER_SLOTS 10
 
 #define CURRENT_COUNTER_SLOT_ADDRESS 0   // 1 byte
-#define BOOTS_ADDRESS 1                  // 2 byte
 #define MAX_WRITES 100000                // theorically 10000
 #define WARNINGS_ADDRESS 1               // bitmap supporting 8 predefined warnings
+#define BOOTS_ADDRESS 2                  // 2 bytes
 
 #define WARNING_COUNTER_SLOTS_ROTATED  1 // counter slots were exhaested and ressetted to 1
 #define WARNING_STORAGE_IS_FULL 2
@@ -134,8 +134,8 @@ void registerNewReading();
 
 ESP8266WebServer restServer(80);
 
-#define BOARD_ID "tank.A"
-#define VERSION "20220724.165"
+#define BOARD_ID "tank.Z"
+#define VERSION "20220725.169"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -571,6 +571,11 @@ byte readWarnings(){
   return warnings;
 }
 
+void removeWarnings(){
+  EEPROM.write(WARNINGS_ADDRESS, 0);
+  EEPROM.commit();
+}
+
 byte removeWarning(byte warning){
   byte warnings = readWarnings();
   if (!(warnings && warning)){
@@ -809,6 +814,17 @@ void reboot() {
     delay(2000);
     ESP.restart();
 }
+
+void  restReadWarnings(){
+    byte warnings = readWarnings();
+    sprintf(buffer, "%d\n", warnings);
+    restServer.send(200, "text/plain", buffer);
+}
+
+void  restRemoveWarnings(){
+    removeWarnings();
+    restServer.send(200, "text/plain", "OK\n");
+}
  
 // Define routing
 void restServerRouting() {
@@ -822,6 +838,8 @@ void restServerRouting() {
     restServer.on(F("/boots"), HTTP_GET, boots);
     restServer.on(F("/reboot"), HTTP_GET, reboot);
     restServer.on(F("/resetEEPROM"), HTTP_GET, resetEEPROM);
+    restServer.on(F("/warnings"), HTTP_GET, restReadWarnings);
+    restServer.on(F("/remove_warnings"), HTTP_GET, restRemoveWarnings);
 }
 
 void handleNotFound() {
