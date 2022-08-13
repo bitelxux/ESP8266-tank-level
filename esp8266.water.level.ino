@@ -135,7 +135,7 @@ void registerNewReading();
 ESP8266WebServer restServer(80);
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20220813.188"
+#define VERSION "20220813.189"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -804,7 +804,7 @@ char* millis_to_human(unsigned long millis)
     int minutes = int(seconds/60);
     seconds = seconds % 60;
 
-    sprintf(buffer, "%d days, %d hours, %d minutes %d seconds", days, hours, minutes, seconds);
+    sprintf(buffer, "%d days, %d hours, %d minutes, %d seconds", days, hours, minutes, seconds);
     return buffer;
 }
 
