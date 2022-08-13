@@ -135,7 +135,7 @@ void registerNewReading();
 ESP8266WebServer restServer(80);
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20220813.189"
+#define VERSION "20220813.190"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -359,7 +359,7 @@ void registerNewReading(){
       delay(20);
   }
 
-  if (distance == -1){
+  if (distance <= 0){
     app->log("Error reading value from sensor");
     return;
   }
