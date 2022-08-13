@@ -135,7 +135,7 @@ void registerNewReading();
 ESP8266WebServer restServer(80);
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20220725.170"
+#define VERSION "20220813.188"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -363,6 +363,9 @@ void registerNewReading(){
     app->log("Error reading value from sensor");
     return;
   }
+
+  sprintf(buffer, "LOG: read distance is %d", distance);
+  app->log(buffer);
 
   int litres = calcLitres(distance);
   lastReading = litres;
@@ -788,6 +791,23 @@ void isTimeToReset(){
   }
 }
 
+char* millis_to_human(unsigned long millis)
+{
+    char* buffer = new char[100];
+
+    int seconds = millis/1000;
+
+    int days = int(seconds/86400);
+    seconds = seconds % 86400;
+    int hours = int(seconds/3600);
+    seconds = seconds % 3600;
+    int minutes = int(seconds/60);
+    seconds = seconds % 60;
+
+    sprintf(buffer, "%d days, %d hours, %d minutes %d seconds", days, hours, minutes, seconds);
+    return buffer;
+}
+
 // Serving Hello world
 void getHelloWord() {
     restServer.send(200, "text/json", "{\"name\": \"Hello world\"}");
@@ -800,6 +820,11 @@ void boardID() {
 
 void version() {
     sprintf(buffer, "%s\n", VERSION);
+    restServer.send(200, "text/plain", buffer);
+}
+
+void uptime() {
+    sprintf(buffer, "%s\n", millis_to_human(millis()));
     restServer.send(200, "text/plain", buffer);
 }
 
@@ -835,6 +860,7 @@ void restServerRouting() {
     restServer.on(F("/helloWorld"), HTTP_GET, getHelloWord);
     restServer.on(F("/boardID"), HTTP_GET, boardID);
     restServer.on(F("/version"), HTTP_GET, version);
+    restServer.on(F("/uptime"), HTTP_GET, uptime);
     restServer.on(F("/boots"), HTTP_GET, boots);
     restServer.on(F("/reboot"), HTTP_GET, reboot);
     restServer.on(F("/resetEEPROM"), HTTP_GET, resetEEPROM);
