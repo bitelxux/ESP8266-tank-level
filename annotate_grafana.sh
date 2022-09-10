@@ -1,7 +1,11 @@
 #!/bin/bash
 
-#DATE="22-Sep-2014 10:32:35.012"
+# examples of use
+# ./anotation.sh "11-Sep-2022 20:30:00.000" "this is a note"
+# ./anotation.sh "11-Sep-2022 20:30"
+
 DATE="$1"
+TEXT=${2:-'NA'}
 timestamp=$(date -d "$DATE" +'%s000')
 
 function gen_body(){
@@ -10,12 +14,10 @@ function gen_body(){
   "dashboardUID":"LlUpHMggk",
   "panelId":2,
   "time":$timestamp,
-  "text":"Annotation Description"
+  "text":"$TEXT"
 }
 EOF
 }
-
-echo $(gen_body)
 
 curl -XPOST "http://admin:eliquela@bbb:3000/api/annotations" \
 --header "Accept: application/json" \
