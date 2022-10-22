@@ -818,6 +818,25 @@ void boardID() {
     restServer.send(200, "text/plain", buffer);
 }
 
+xxx
+void help() {
+    sprintf(buffer, "TLM (Tank Level Monitor) %s\n",
+                    "----------------------------------------------------------------\n"
+                    "\n",
+                    "help: API help\n"
+                    "helloWorld: just kept because of romanticsim\n",
+                    "boardID: gets board's ID\n",
+                    "version: build version\n",
+                    "uptime: gets uptime\n",
+                    "boots: number of boots so long\n",
+                    "reboot: reboots the board\n",
+                    "resetEEPROM: clears all info in EEPROM, including local readings\n",
+                    "warnings: lists current active warnings\n",
+                    "warnings/clear: clear current warnings\n", VERSION
+            );
+    restServer.send(200, "text/plain", buffer);
+}
+
 void version() {
     sprintf(buffer, "%s\n", VERSION);
     restServer.send(200, "text/plain", buffer);
@@ -857,6 +876,7 @@ void restServerRouting() {
         restServer.send(200, F("text/html"),
             F("Welcome to the REST Web Server"));
     });
+    restServer.on(F("/help"), HTTP_GET, help);
     restServer.on(F("/helloWorld"), HTTP_GET, getHelloWord);
     restServer.on(F("/boardID"), HTTP_GET, boardID);
     restServer.on(F("/version"), HTTP_GET, version);
