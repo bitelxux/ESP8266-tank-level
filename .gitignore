@@ -1,1 +1,5 @@
 build
+docker/grafana-data
+docker/scripts/robotits.log
+docker/server-scripts
+

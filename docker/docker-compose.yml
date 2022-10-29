@@ -3,6 +3,10 @@ services:
   influxdb:
     hostname: influxdb
     image: influxdb:1.8
+    logging:
+          options:
+            max-size: "10m"
+            max-file: "3"
     restart: always
     restart: always
     environment:
@@ -15,6 +19,9 @@ services:
       - ./influxdb:/var/lib/influxdb
   server:
     build: server
+    logging:
+          options:
+            max-size: "10m"
     hostname: server
     restart: always
     volumes:
@@ -26,6 +33,9 @@ services:
     restart: always
   grafana:
     image: grafana/grafana:latest
+    logging:
+          options:
+            max-size: "10m"
     hostname: grafana
     restart: always
     volumes:
