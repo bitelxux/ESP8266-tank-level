@@ -20,11 +20,16 @@ def ping():
      return "pong"
 
 def is_outlier(new_value, timestamp):
+
+
+    if new_value in [960] or new_value > 1300:
+        return True
+
     result = client.query(f"SELECT * FROM readings WHERE time <= {timestamp} ORDER BY time DESC LIMIT 1")
     readings = list(result.get_points(measurement='readings'))
     values =  [reading['value'] for reading in readings]
 
-    return values and abs(new_value - values[0]) > 250
+    return values and abs(new_value - values[0]) > 300
 
 @app.route('/add/<string:value>')
 def add(value):
