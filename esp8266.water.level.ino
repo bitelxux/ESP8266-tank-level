@@ -722,6 +722,14 @@ void resetEEPROM(){
   restServer.send(200, "text/plain", buffer);
 }
 
+void resetWifi(){
+
+  sprintf(buffer, "WIFI networks will be reset and board rebooted NOW");
+  app->log(buffer);
+  restServer.send(200, "text/plain", buffer);
+  _resetWifi()
+}
+
 void readConfigFile(){
   Serial.println("mounting FS...");
 
@@ -787,7 +795,7 @@ void isTimeToReset(){
   if (time_to_reset){
     app->log("RESET button has been pressed for more than 10 seconds. Resetting WIFI and  EEPROM");
     resetEEPROM();
-    resetWifi();
+    _resetWifi();
   }
 }
 
@@ -833,6 +841,7 @@ void help() {
                     "readings: number of locally stored readings\n"
                     "reboot: reboots the board\n"
                     "resetEEPROM: clears all info in EEPROM, including local readings\n"
+                    "resetWIFI: deletes WIFI known networks\n"
                     "warnings: lists current active warnings\n"
                     "warnings/clear: clear current warnings\n\n", VERSION
             );
@@ -892,6 +901,7 @@ void restServerRouting() {
     restServer.on(F("/reboot"), HTTP_GET, reboot);
     restServer.on(F("/readings"), HTTP_GET, get_readings);
     restServer.on(F("/resetEEPROM"), HTTP_GET, resetEEPROM);
+    restServer.on(F("/resetWIFI"), HTTP_GET, resetWIFI);
     restServer.on(F("/warnings"), HTTP_GET, restReadWarnings);
     restServer.on(F("/warnings/clear"), HTTP_GET, clearWarnings);
 }
@@ -1012,7 +1022,7 @@ void setup() {
   registerNewReading();
 }
 
-void resetWifi(){
+void _resetWifi(){
   app->log("reset WIFI networks");
   app->wifiManager->resetSettings();
   ESP.restart();
