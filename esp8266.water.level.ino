@@ -135,7 +135,7 @@ void registerNewReading();
 ESP8266WebServer restServer(80);
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20220813.190"
+#define VERSION "20221022.199"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -818,22 +818,29 @@ void boardID() {
     restServer.send(200, "text/plain", buffer);
 }
 
-xxx
 void help() {
-    sprintf(buffer, "TLM (Tank Level Monitor) %s\n",
+    // this buffer is bigger 
+    char *buffer = new char[1024];
+    sprintf(buffer, "TLM (Tank Level Monitor) %s\n"
                     "----------------------------------------------------------------\n"
-                    "\n",
+                    "\n"
                     "help: API help\n"
-                    "helloWorld: just kept because of romanticsim\n",
-                    "boardID: gets board's ID\n",
-                    "version: build version\n",
-                    "uptime: gets uptime\n",
-                    "boots: number of boots so long\n",
-                    "reboot: reboots the board\n",
-                    "resetEEPROM: clears all info in EEPROM, including local readings\n",
-                    "warnings: lists current active warnings\n",
-                    "warnings/clear: clear current warnings\n", VERSION
+                    "helloWorld: json payload test\n"
+                    "boardID: gets board's ID\n"
+                    "version: build version\n"
+                    "uptime: gets uptime\n"
+                    "boots: number of boots so long\n"
+                    "readings: number of locally stored readings\n"
+                    "reboot: reboots the board\n"
+                    "resetEEPROM: clears all info in EEPROM, including local readings\n"
+                    "warnings: lists current active warnings\n"
+                    "warnings/clear: clear current warnings\n\n", VERSION
             );
+    restServer.send(200, "text/plain", buffer);
+}
+
+void get_readings() {
+    sprintf(buffer, "%d\n", readCounter());
     restServer.send(200, "text/plain", buffer);
 }
 
@@ -883,6 +890,7 @@ void restServerRouting() {
     restServer.on(F("/uptime"), HTTP_GET, uptime);
     restServer.on(F("/boots"), HTTP_GET, boots);
     restServer.on(F("/reboot"), HTTP_GET, reboot);
+    restServer.on(F("/readings"), HTTP_GET, get_readings);
     restServer.on(F("/resetEEPROM"), HTTP_GET, resetEEPROM);
     restServer.on(F("/warnings"), HTTP_GET, restReadWarnings);
     restServer.on(F("/warnings/clear"), HTTP_GET, clearWarnings);
