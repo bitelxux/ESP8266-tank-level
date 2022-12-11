@@ -135,7 +135,7 @@ void registerNewReading();
 ESP8266WebServer restServer(80);
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20221022.199"
+#define VERSION "20221101.205"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -722,12 +722,12 @@ void resetEEPROM(){
   restServer.send(200, "text/plain", buffer);
 }
 
-void resetWifi(){
+void resetWIFI(){
 
   sprintf(buffer, "WIFI networks will be reset and board rebooted NOW");
   app->log(buffer);
   restServer.send(200, "text/plain", buffer);
-  _resetWifi()
+  _resetWifi();
 }
 
 void readConfigFile(){
