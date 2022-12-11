@@ -135,7 +135,7 @@ void registerNewReading();
 ESP8266WebServer restServer(80);
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20221101.205"
+#define VERSION "20221211.213"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -936,6 +936,15 @@ int incBoots(){
 }
 
 void setup() {
+
+  
+  // Wait three minutes to start the party
+  // When there's a power outage, the router
+  // might take a couple of minutes to be ready
+  // if the ESP tries to connect and fails
+  // It won't try again. That might be a bug
+  // in this code !
+  delay(3*60*1000);
 
   app = new App(BOARD_ID, log_server);
 
