@@ -135,7 +135,7 @@ void registerNewReading();
 ESP8266WebServer restServer(80);
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20221211.213"
+#define VERSION "20221219.216"
 
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
@@ -791,6 +791,15 @@ ICACHE_RAM_ATTR void resetButtonPushed() {
 
 }
 
+void checkConnection()  {
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.print(millis());
+      Serial.println("Reconnecting to WiFi...");
+      WiFi.disconnect();
+      WiFi.reconnect();
+    }
+}
+
 void isTimeToReset(){
   if (time_to_reset){
     app->log("RESET button has been pressed for more than 10 seconds. Resetting WIFI and  EEPROM");
@@ -937,15 +946,6 @@ int incBoots(){
 
 void setup() {
 
-  
-  // Wait three minutes to start the party
-  // When there's a power outage, the router
-  // might take a couple of minutes to be ready
-  // if the ESP tries to connect and fails
-  // It won't try again. That might be a bug
-  // in this code !
-  delay(3*60*1000);
-
   app = new App(BOARD_ID, log_server);
 
   Serial.begin(115200); 
@@ -976,6 +976,7 @@ void setup() {
   app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app->addTimer(1000, updateDisplay, "updateDisplay");
   app->addTimer(1000, isTimeToReset, "isTimeToReset");
+  app->addTimer(30*1000, checkConnection, "checkConnection");
 
   readConfigFile();
   WiFiManagerParameter pserver(SERVER_LABEL, "Server IP", server, 16);
