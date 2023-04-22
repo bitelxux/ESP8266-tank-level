@@ -20,8 +20,8 @@ board: NodeMCU1.0 (ESP-12E Module)
 #pragma pack(push, 1)
 #define SENSOR_MODE 2
 
-#define BOARD_ID "tank.Y"
-#define VERSION "20230422.239"
+#define BOARD_ID "caseta.A"
+#define VERSION "20230422.7"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -858,6 +858,7 @@ void help() {
                     "version: build version\n"
                     "uptime: gets uptime\n"
                     "boots: number of boots so long\n"
+                    "resetBoots: resets number of boots to 0\n"
                     "readings: number of locally stored readings\n"
                     "reboot: reboots the board\n"
                     "resetEEPROM: clears all info in EEPROM, including local readings\n"
@@ -918,6 +919,7 @@ void restServerRouting() {
     restServer.on(F("/version"), HTTP_GET, version);
     restServer.on(F("/uptime"), HTTP_GET, uptime);
     restServer.on(F("/boots"), HTTP_GET, boots);
+    restServer.on(F("/resetBoots"), HTTP_GET, resetBoots);
     restServer.on(F("/reboot"), HTTP_GET, reboot);
     restServer.on(F("/readings"), HTTP_GET, get_readings);
     restServer.on(F("/resetEEPROM"), HTTP_GET, resetEEPROM);
@@ -945,6 +947,13 @@ unsigned short readBoots(){
     unsigned short boots;
     EEPROM.get(BOOTS_ADDRESS, boots);
     return boots;
+}
+
+void resetBoots(){
+    unsigned short boots = 0;
+    EEPROM.write(BOOTS_ADDRESS, boots);
+    EEPROM.commit();
+    restServer.send(200, "text/plain", "boots resetted\n");
 }
 
 int incBoots(){
