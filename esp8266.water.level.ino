@@ -7,7 +7,6 @@ https://arduino.esp8266.com/stable/package_esp8266com_index.json
 board: NodeMCU1.0 (ESP-12E Module)
 */
 
-
 //Libraries
 #include <FS.h>
 #include <cnn.h>
@@ -20,6 +19,9 @@ board: NodeMCU1.0 (ESP-12E Module)
 // in the EEPROM
 #pragma pack(push, 1)
 #define SENSOR_MODE 2
+
+#define BOARD_ID "tank.Y"
+#define VERSION "20230422.239"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -134,9 +136,6 @@ void registerNewReading();
 
 ESP8266WebServer restServer(80);
 
-#define BOARD_ID "tank.Z"
-#define VERSION "20221219.216"
-
 // This values  will depend on what the user configures
 // on the  WifiManager on the first connection
 char server[16];
@@ -149,6 +148,8 @@ char baseURL[30];
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+
+boolean displayInitialized = false;
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -236,6 +237,12 @@ void drawSend(){
 }
 
 void updateDisplay(){
+
+  if (!displayInitialized) {
+    Serial.println("Display not initialized");
+    return;
+  }
+
   display.clearDisplay();
 
   drawTank();
@@ -290,8 +297,12 @@ void updateDisplay(){
 void initOLED(){
 
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
-    Serial.println(F("SSD1306 allocation failed"));
+  if(display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
+    Serial.println("SSD1306 found and intialized");
+    displayInitialized = true;
+  }
+  else {
+    Serial.println("SSD1306 allocation failed");
   }
 
   // Show initial display buffer contents on the screen --
@@ -341,7 +352,7 @@ int mobileAverage(int value)
 
 bool isServerAlive(){
     sprintf(buffer, "%s/ping", baseURL);
-    Serial.println(buffer);
+    //Serial.println(buffer);
     return (app->send(buffer));
 }
 
@@ -950,11 +961,13 @@ void setup() {
 
   Serial.begin(115200); 
 
-  //app->wifiManager->resetSettings();
-  //Serial.println("Wifi reseted");
-  //delay(5000);
-  //return;
-
+  /*
+  app->wifiManager->resetSettings();
+  Serial.println("Wifi reseted");
+  delay(5000);
+  return;
+  */
+  
   //set GPIO14 interrupt
   attachInterrupt(digitalPinToInterrupt(RESET_BUTTON), resetButtonPushed, CHANGE);
 
