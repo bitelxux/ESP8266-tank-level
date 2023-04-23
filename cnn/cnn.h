@@ -27,6 +27,11 @@ static const uint8_t D9   = 3;
 static const uint8_t D10  = 1;
 */
 
+// for debug
+#define DEBUG_WIFI   0b00000001
+#define DEBUG_SERIAL 0b00000010
+#define DEBUG_ALL    0b00000100
+
 class App;
 
 typedef void (*function_callback)();
@@ -73,7 +78,7 @@ class App{
     // for NTP
     unsigned long tEpoch = 0;
     unsigned long tEpochOffset = 0;
-    
+
     Timer* timers = NULL;
     Log* logger;
     App(const char* ID, const char* server);
@@ -85,6 +90,7 @@ class App{
     void attendTimers();
     void imAlive();
     void log(char* msg);
+    void debug(char* level, unsigned short int channels, char* message);
     bool send(String what);
     String get(String what);
     void handleOTA();

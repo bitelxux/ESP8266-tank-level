@@ -12,7 +12,7 @@
 #define SENSOR_MODE 2
 
 #define BOARD_ID "caseta.A"
-#define VERSION "20230423.40"
+#define VERSION "20230423.48"
 
 //EEPROM
 #define EEPROM_SIZE 4096
