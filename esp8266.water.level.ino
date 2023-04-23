@@ -11,8 +11,8 @@
 #pragma pack(push, 1)
 #define SENSOR_MODE 2
 
-#define BOARD_ID "caseta.A"
-#define VERSION "20230423.48"
+#define BOARD_ID "tank.Z"
+#define VERSION "20230423.233"
 
 //EEPROM
 #define EEPROM_SIZE 4096
