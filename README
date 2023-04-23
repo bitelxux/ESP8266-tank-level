@@ -54,3 +54,14 @@ That 'cnn' library will be split from the main code at some point.
 And it needs a proper name !
 
 Keep syntonized if you want to see where this ends
+
+First environment
+============================================
+
+ - Arduino IDE 1.8.15
+ - Arduino AVR board 1.8.3
+ - ESP8266 2.7.0
+
+https://arduino.esp8266.com/stable/package_esp8266com_index.json
+board: NodeMCU1.0 (ESP-12E Module)
+

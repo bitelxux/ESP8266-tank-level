@@ -1,12 +1,3 @@
-/* Testest with
- -  Arduino IDE 1.8.15
-    - Arduino AVR board 1.8.3
-    - ESP8266 2.7.0
-
-https://arduino.esp8266.com/stable/package_esp8266com_index.json
-board: NodeMCU1.0 (ESP-12E Module)
-*/
-
 //Libraries
 #include <FS.h>
 #include <cnn.h>
@@ -21,7 +12,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 #define SENSOR_MODE 2
 
 #define BOARD_ID "caseta.A"
-#define VERSION "20230422.7"
+#define VERSION "20230423.40"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -71,6 +62,9 @@ board: NodeMCU1.0 (ESP-12E Module)
 #else
   int (*readSensor)() = &readSensor_mode2;
 #endif
+
+#define RSSI_MAX -50  // maximum strength of signal in dBm
+#define RSSI_MIN -100 // minimum strength of signal in dBm
 
 // WiFiManager parameteres
 #define SERVER_LABEL "SERVER_IP"
@@ -846,33 +840,46 @@ void boardID() {
     restServer.send(200, "text/plain", buffer);
 }
 
-void help() {
-    // this buffer is bigger 
-    char *buffer = new char[1024];
-    sprintf(buffer, "TLM (Tank Level Monitor) %s\n"
-                    "----------------------------------------------------------------\n"
-                    "\n"
-                    "help: API help\n"
-                    "helloWorld: json payload test\n"
-                    "boardID: gets board's ID\n"
-                    "version: build version\n"
-                    "uptime: gets uptime\n"
-                    "boots: number of boots so long\n"
-                    "resetBoots: resets number of boots to 0\n"
-                    "readings: number of locally stored readings\n"
-                    "reboot: reboots the board\n"
-                    "resetEEPROM: clears all info in EEPROM, including local readings\n"
-                    "resetWIFI: deletes WIFI known networks\n"
-                    "warnings: lists current active warnings\n"
-                    "warnings/clear: clear current warnings\n\n", VERSION
-            );
-    restServer.send(200, "text/plain", buffer);
+void scan_networks() {
+
+  char *buffer = new char[1024];
+  int n = WiFi.scanNetworks();
+  char *connected = NULL;
+
+  if (n == 0) {
+    Serial.println("no networks found");
+  } else {
+    sprintf(buffer, "networks found:\n");
+    for (int i = 0; i < n; ++i) {
+      // Print SSID and RSSI for each network found
+
+      if (WiFi.SSID(i) == WiFi.SSID()){
+        connected = "*";
+      } else {
+        connected = " ";
+      }
+    
+      sprintf(buffer + strlen(buffer), "%d [%s] %-32s dBM %d (%d%%)\n", 
+                                       i+1,
+                                       connected, 
+                                       WiFi.SSID(i).c_str(), 
+                                       WiFi.RSSI(i), 
+                                       dBmtoPercentage(WiFi.RSSI(i)));
+    }
+  }
+  restServer.send(200, "text/plain", buffer);
 }
 
 void get_readings() {
     sprintf(buffer, "%d\n", readCounter());
     restServer.send(200, "text/plain", buffer);
 }
+
+void wifi_signal() {
+    sprintf(buffer, "%s [%d]\n", WiFi.SSID(), WiFi.RSSI());
+    restServer.send(200, "text/plain", buffer);
+}
+
 
 void version() {
     sprintf(buffer, "%s\n", VERSION);
@@ -906,7 +913,51 @@ void clearWarnings(){
     removeWarnings();
     restServer.send(200, "text/plain", "OK\n");
 }
- 
+
+int dBmtoPercentage(int dBm)
+{
+  int quality;
+    if(dBm <= RSSI_MIN)
+    {
+        quality = 0;
+    }
+    else if(dBm >= RSSI_MAX)
+    {  
+        quality = 100;
+    }
+    else
+    {
+        quality = 2 * (dBm + 100);
+   }
+
+   return quality;
+}
+
+void help() {
+    // this buffer is bigger 
+    char *buffer = new char[1024];
+    sprintf(buffer, "TLM (Tank Level Monitor) %s\n"
+                    "----------------------------------------------------------------\n"
+                    "\n"
+                    "help: API help\n"
+                    "helloWorld: json payload test\n"
+                    "boardID: gets board's ID\n"
+                    "version: build version\n"
+                    "uptime: gets uptime\n"
+                    "boots: number of boots so long\n"
+                    "resetBoots: resets number of boots to 0\n"
+                    "readings: number of locally stored readings\n"
+                    "reboot: reboots the board\n"
+                    "resetEEPROM: clears all info in EEPROM, including local readings.\n"
+                    "resetWIFI: deletes WIFI known networks\n"
+                    "WIFISignal: WIFI RSSI\n"
+                    "scanNetworks: info about WIFI networks\n"
+                    "warnings: lists current active warnings\n"
+                    "warnings/clear: clear current warnings\n\n", VERSION
+            );
+    restServer.send(200, "text/plain", buffer);
+}
+
 // Define routing
 void restServerRouting() {
     restServer.on("/", HTTP_GET, []() {
@@ -924,6 +975,8 @@ void restServerRouting() {
     restServer.on(F("/readings"), HTTP_GET, get_readings);
     restServer.on(F("/resetEEPROM"), HTTP_GET, resetEEPROM);
     restServer.on(F("/resetWIFI"), HTTP_GET, resetWIFI);
+    restServer.on(F("/WIFISignal"), HTTP_GET, wifi_signal);
+    restServer.on(F("/scanNetworks"), HTTP_GET, scan_networks);
     restServer.on(F("/warnings"), HTTP_GET, restReadWarnings);
     restServer.on(F("/warnings/clear"), HTTP_GET, clearWarnings);
 }
@@ -948,6 +1001,8 @@ unsigned short readBoots(){
     EEPROM.get(BOOTS_ADDRESS, boots);
     return boots;
 }
+
+
 
 void resetBoots(){
     unsigned short boots = 0;
@@ -1064,3 +1119,4 @@ void loop() {
   app->attendTimers();
   restServer.handleClient();
 }
+
