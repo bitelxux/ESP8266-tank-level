@@ -11,6 +11,16 @@ client.switch_database('tank')
 
 app = Flask(__name__)
 
+def log(board, message):
+    from datetime import datetime
+
+    now = datetime.now()
+    current_time = now.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
+    with open("robotits.log", "a") as f:
+        f.write(f"{current_time} [{board}] {message}\n")
+
+
 @app.route('/')
 def main():
      abort(403)
@@ -56,6 +66,7 @@ def add(value):
           }
         ]
         client.write_points(body)
+        log(id, f"The value {value} has been gladly added")
         return f"The value {value} has been gladly added"
     except:
         return f"Error adding {value}"
