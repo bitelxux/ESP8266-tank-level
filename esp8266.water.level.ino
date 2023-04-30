@@ -12,7 +12,7 @@
 #define SENSOR_MODE 2
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20230423.233"
+#define VERSION "20230430.224"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -798,10 +798,23 @@ ICACHE_RAM_ATTR void resetButtonPushed() {
 
 void checkConnection()  {
     if (WiFi.status() != WL_CONNECTED) {
-      Serial.print(millis());
       Serial.println("Reconnecting to WiFi...");
-      WiFi.disconnect();
       WiFi.reconnect();
+      
+      int t = millis();
+      
+      while (millis() - t < 60000 && WiFi.status() != WL_CONNECTED){
+        delay(2000);
+        Serial.println("Reconnecting to WiFi...");
+      }
+
+      if (WiFi.status() == WL_CONNECTED){
+        Serial.println("WiFi reconnected!");
+      }
+      else {
+        Serial.println("Failed to reconnect to WiFi");
+      }
+
     }
 }
 
