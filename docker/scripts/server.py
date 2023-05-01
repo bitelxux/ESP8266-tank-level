@@ -6,10 +6,22 @@ import statistics as stats
 from influxdb import InfluxDBClient
 from flask import Flask, Markup, render_template, abort, request
 
+SKIP_OUTLIER_DETECTION = "/water_tank/SKIP_OUTLIER_DETECTION"
+
 client = InfluxDBClient(host='influxdb', port=8086, username='admin', password='admin')
 client.switch_database('tank')
 
 app = Flask(__name__)
+
+def log(board, message):
+    from datetime import datetime
+
+    now = datetime.now()
+    current_time = now.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
+    with open("/water_tank/robotits.log", "a") as f:
+        f.write(f"{current_time} [{board}] {message}\n")
+
 
 @app.route('/')
 def main():
@@ -21,6 +33,11 @@ def ping():
 
 def is_outlier(new_value, timestamp):
 
+    if os.path.isfile(SKIP_OUTLIER_DETECTION):
+        log('server', f"Outlier detection is disabled. Delete {SKIP_OUTLIER_DETECTION} to re-enable")
+        return False
+    else:
+        log('server', 'SKIP not found')
 
     if new_value in [960] or new_value > 1300:
         return True
