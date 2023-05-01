@@ -12,7 +12,7 @@
 #define SENSOR_MODE 2
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20230430.224"
+#define VERSION "20230501.225"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -301,8 +301,8 @@ void initOLED(){
 
   // Show initial display buffer contents on the screen --
   // the library initializes this with an Adafruit splash screen.
-  //display.display();
-  //delay(2000); // Pause for 2 seconds
+  display.display();
+  delay(2000); // Pause for 2 seconds
 }
 
 // OLED
