@@ -1,18 +1,18 @@
 //Libraries
 #include <FS.h>
-#include <cnn.h>
 #include <ArduinoJson.h>     // 5.13.5 !!
-#include <SoftwareSerial.h>
 
 #include <ESP8266WebServer.h>
+
+#include <cnn.h>
+#include "sensor_JSN-SR04T.h"
 
 // This is for each variable to use it's real size when stored
 // in the EEPROM
 #pragma pack(push, 1)
-#define SENSOR_MODE 2
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20230501.225"
+#define VERSION "20230502.260"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -47,22 +47,6 @@
 // #define RECORDS_BASE_ADDRESS RESERVED_BYTES + 4 * COUNTER_SLOTS 
 //\\ EEPROM
 
-// for sensor mode 0
-#define TRIGGER_PIN 14
-#define ECHO_PIN 12
-#define USONIC_DIV 58.0
-
-// for sensor mode 1
-// requires to solder a 47K resistor
-#define TX 14
-#define RX 12
-
-#if (SENSOR_MODE == 1)
-  int (*readSensor)() = &readSensor_mode1;
-#else
-  int (*readSensor)() = &readSensor_mode2;
-#endif
-
 #define RSSI_MAX -50  // maximum strength of signal in dBm
 #define RSSI_MIN -100 // minimum strength of signal in dBm
 
@@ -76,6 +60,7 @@ int rb_required_time = 3;
 boolean time_to_reset = false;
 
 App *app = NULL;
+SR04T_sensor* sensor = NULL;
 
 //flag for saving data
 bool shouldSaveConfig = false;
@@ -97,32 +82,9 @@ unsigned short int RECORDS_BASE_ADDRESS = RESERVED_BYTES + 4 * COUNTER_SLOTS;
 unsigned short int MAX_RECORDS = (EEPROM_SIZE - RECORDS_BASE_ADDRESS)/sizeof(Reading) -1;
 // TODO review that -1. It's not the best approach
 
-// all distances in meters
-float TANK_RADIUS = 0.6;
-float TANK_EMPTY_DISTANCE = 1.170;
-float TANK_FULL_DISTANCE= 0.21;
-float REMAINING_WATER_HEIGHT= 0.19;
-
-// circular buffer
-int sum = 0;
-int elementCount = 0;
-const int windowSize = 5;
-int circularBuffer[windowSize];
-int* circularBufferAccessor = circularBuffer;
-
-// pre-calculated
-float piR2=3.141516*TANK_RADIUS*TANK_RADIUS;
-float MAX_VOLUME = 1000 * piR2 * (TANK_EMPTY_DISTANCE + REMAINING_WATER_HEIGHT);
-
-char buffer[200];
-unsigned char dataBuffer[4] = {0};
-unsigned char CS;
 int counter = 0; // number of registers in EEPROM
 int lastReading = 0;
-int distance =  0;
-int previous_distance = 0;
-
-SoftwareSerial sensor(RX, TX);
+char buffer[200];
 
 // prototipes
 void flushStoredData();
@@ -135,7 +97,6 @@ ESP8266WebServer restServer(80);
 char server[16];
 char log_server[30];
 char baseURL[30];
-
 
 //OLED
 #include <SPI.h>
@@ -202,22 +163,7 @@ void clearSection(int x, int y, int x1, int y1){
 }
 
 void drawTank(){
-
-  int outerX = 90;
-  int outerY = 18;
-  int outerWidth = 37;
-  int outerHeight = 46;
-  display.drawRoundRect(outerX, outerY, outerWidth, outerHeight, 4, 1);
-
-  int innerWidth = outerWidth - 4;
-  int innerHeight = (lastReading * outerHeight)/MAX_VOLUME;
-  int innerX = outerX + 2;
-  int innerY = outerY + 2 + outerHeight - innerHeight - 4;
-  display.fillRoundRect(innerX, innerY, innerWidth, innerHeight, 4, 1);
-
-  // flat surface
-  display.fillRect(innerX, innerY, innerWidth, 4, 1);
-
+  sensor->draw(&display, lastReading);
 }
 
 void drawStore(){
@@ -305,45 +251,6 @@ void initOLED(){
   delay(2000); // Pause for 2 seconds
 }
 
-// OLED
-
-int calcLitres(short int distance){
-
-    float fd = distance/1000.0; // meters
-    float h = max((float)0.0, TANK_EMPTY_DISTANCE - fd);
-    float v = piR2 * h * 1000;
-
-    // There is some remaining water under the floating switch
-    // that is not usable because the pumb is off at this level.
-    // Yet, it is water in the tank
-    v += piR2 * REMAINING_WATER_HEIGHT * 1000;
-
-    return (int) v;
-}
-
-void appendToBuffer(short int value)
-{
-  *circularBufferAccessor = value;
-  circularBufferAccessor++;
-  if (circularBufferAccessor >= circularBuffer + windowSize) 
-    circularBufferAccessor = circularBuffer;
-}
-
-int mobileAverage(int value)
-{
-  // try not to do movile average
-  // it's done in grafana
-
-  return value;
-
-  sum -= *circularBufferAccessor;
-  sum += value;
-  appendToBuffer(value);
-  if (elementCount < windowSize)
-    ++elementCount;
-  return (int) sum / elementCount;
-}
-
 bool isServerAlive(){
     sprintf(buffer, "%s/ping", baseURL);
     //Serial.println(buffer);
@@ -357,7 +264,7 @@ void registerNewReading(){
 
   // some attempts to read a value from sensor
   for (int i=0; i<10; i++){
-      distance = readSensor();
+      distance = sensor->read();
       if (distance != -1){
         break;
       }
@@ -372,7 +279,7 @@ void registerNewReading(){
   sprintf(buffer, "LOG: read distance is %d", distance);
   app->log(buffer);
 
-  int litres = calcLitres(distance);
+  int litres = sensor->calcLitres(distance);
   lastReading = litres;
 
   unsigned long now = app->getEpochSeconds();
@@ -396,69 +303,6 @@ void registerNewReading(){
       app->log("Warning: Not handling reading as time is not synced");
   }
 
-}
-
-// Trigger + Echo mode
-int readSensor_mode1(){
-    long t = 0; // Measure: Put up Trigger...
-    digitalWrite(TRIGGER_PIN, HIGH); // Wait for 11 µs ...
-    delayMicroseconds(11); // Put the trigger down ...
-    digitalWrite(TRIGGER_PIN, LOW); // Wait for the echo ...
-    t = pulseIn(ECHO_PIN, HIGH);
-
-    int mm = t/(29.2*2)*10;
-
-    //sprintf(buffer, "duration was %d. mm was %d", t, mm);
-    //app->log(buffer);
-
-    // wrong reading
-    if (t == 0){
-        return -1;
-    }
-
-    return(mobileAverage(mm));
-}
-
-
-// read from serial. Requires a 47K resistor soldered on the board.
-int readSensor_mode2(){
-
-   short int distance = 0;
-
-   // Flush old readings from sensor
-   while (sensor.available()){
-     delay(5);
-     sensor.read();
-   }
-   delay(20);
-
-   if (sensor.available() > 0){
-       delay(4);
-    
-       if (sensor.read() == 0xFF){
-          dataBuffer[0] = 0xFF;
-          for (int i=1; i<4; i++){
-            dataBuffer[i] = sensor.read();
-          }
-       }
-    
-       //sprintf(buffer, "lectura: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-       //app->log(buffer);
-    
-       CS = dataBuffer[0] + dataBuffer[1] + dataBuffer[2];
-    
-       if (dataBuffer[3] == CS){
-         distance = (dataBuffer[1] << 8) + dataBuffer[2];
-         //sprintf(buffer, "lectura: %d", distance);
-         //app->log(buffer);
-         return mobileAverage(distance);
-       }
-       else{
-         sprintf(buffer, "CS Error: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-         app->log(buffer);
-         return -1;
-       }
-   }
 }
 
 void flushStoredData(){
@@ -1035,6 +879,7 @@ int incBoots(){
 void setup() {
 
   app = new App(BOARD_ID, log_server);
+  sensor = new SR04T_sensor(app);
 
   Serial.begin(115200); 
 
@@ -1050,17 +895,6 @@ void setup() {
 
   initOLED();
   EEPROM.begin(EEPROM_SIZE);
-
-  if (SENSOR_MODE == 2){
-      sensor.begin(9600);
-  }
-  else
-  {
-      pinMode(TRIGGER_PIN, OUTPUT); // Initializing Trigger Output and Echo Input
-      pinMode(ECHO_PIN, INPUT);
-      digitalWrite(TRIGGER_PIN, LOW); // Reset the trigger pin and wait a half a second
-      delayMicroseconds(500);  
-  }
 
   app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
   app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
