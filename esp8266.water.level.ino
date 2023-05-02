@@ -23,7 +23,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 #pragma pack(push, 1)
 
 #define BOARD_ID "board.A"
-#define VERSION "20230502.86"
+#define VERSION "20230502.89"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -338,8 +338,6 @@ void registerNewReading(){
 }
 
 void flushStoredData(){
-
-  return;
 
   Reading reading;  
   unsigned short int counter = readCounter();
@@ -675,10 +673,22 @@ ICACHE_RAM_ATTR void resetButtonPushed() {
 
 void checkConnection()  {
     if (WiFi.status() != WL_CONNECTED) {
-      Serial.print(millis());
-      Serial.println("Reconnecting to WiFi...");
-      WiFi.disconnect();
       WiFi.reconnect();
+
+      int t = millis();
+
+      while (millis() - t < 60000 && WiFi.status() != WL_CONNECTED){
+        delay(2000);
+        Serial.println("Reconnecting to WiFi...");
+      }
+
+      if (WiFi.status() == WL_CONNECTED){
+        Serial.println("WiFi reconnected!");
+      }
+      else {
+        Serial.println("Failed to reconnect to WiFi");
+      }
+
     }
 }
 
@@ -849,7 +859,7 @@ void setup() {
   EEPROM.begin(EEPROM_SIZE);
 
   app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
+  app->addTimer(300 * 1000, registerNewReading, "registerNewReading");
   app->addTimer(1000, updateDisplay, "updateDisplay");
   app->addTimer(1000, isTimeToReset, "isTimeToReset");
   app->addTimer(30*1000, checkConnection, "checkConnection");
