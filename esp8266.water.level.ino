@@ -23,7 +23,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 #pragma pack(push, 1)
 
 #define BOARD_ID "board.A"
-#define VERSION "20230502.51"
+#define VERSION "20230502.71"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -185,24 +185,7 @@ void clearSection(int x, int y, int x1, int y1){
 }
 
 void drawTank(){
-
-  /*
-  int outerX = 90;
-  int outerY = 18;
-  int outerWidth = 37;
-  int outerHeight = 46;
-  display.drawRoundRect(outerX, outerY, outerWidth, outerHeight, 4, 1);
-
-  int innerWidth = outerWidth - 4;
-  int innerHeight = (lastReading * outerHeight)/MAX_VOLUME;
-  int innerX = outerX + 2;
-  int innerY = outerY + 2 + outerHeight - innerHeight - 4;
-  display.fillRoundRect(innerX, innerY, innerWidth, innerHeight, 4, 1);
-
-  // flat surface
-  display.fillRect(innerX, innerY, innerWidth, 4, 1);
-  */
-
+  sensor->draw(&display, lastReading);
 }
 
 void drawStore(){
@@ -254,7 +237,7 @@ void updateDisplay(){
   display.print(BOARD_ID);
 
   display.setCursor(0,18);
-  display.print("Litros: ");
+  display.print(sensor->READ_LABEL);
   display.setCursor(46,18);            
   display.print(lastReading);
 
@@ -325,6 +308,7 @@ void registerNewReading(){
   char buffer[100];
 
   int value = sensor->read();
+  lastReading = value;
 
   if (value == 666){
     return;

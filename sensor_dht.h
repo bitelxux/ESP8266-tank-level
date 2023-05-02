@@ -1,6 +1,9 @@
 #ifndef sensor_dht_h
 #define sensor_dht_h
 
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
 #include <DHT.h>
 
 #include "cnn.h"
@@ -12,6 +15,9 @@
 
 class DHT11_sensor{
     public:
+
+        char* READ_LABEL = "Temp: ";
+
         App* app = NULL;
         DHT* dht = NULL;
 
@@ -20,6 +26,9 @@ class DHT11_sensor{
         int readTemperature();
         int readHumidity();
         void init();
+
+        // overload draw for this sensor
+        void draw(Adafruit_SSD1306* display, int value);
 };
 
 #endif

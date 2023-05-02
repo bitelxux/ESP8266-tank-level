@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include "sensor_dht.h"
 
+#define MAX_TEMPERATURE 80
+
 DHT11_sensor::DHT11_sensor(App* app){
     this->app = app;
     this->dht = new DHT(DHTPIN, DHTTYPE, 100);
@@ -32,4 +34,21 @@ int DHT11_sensor::readHumidity(){
         read = 666;
     }    
     return read;
+}
+
+void DHT11_sensor::draw(Adafruit_SSD1306* display, int value){
+  int outerX = 108;
+  int outerY = 18;
+  int outerWidth = 20;
+  int outerHeight = 46;
+  display->drawRoundRect(outerX, outerY, outerWidth, outerHeight, 4, 1);
+
+  int innerWidth = outerWidth - 4;
+  int innerHeight = (value * outerHeight)/MAX_TEMPERATURE;
+  int innerX = outerX + 2;
+  int innerY = outerY + 2 + outerHeight - innerHeight - 4;
+  display->fillRoundRect(innerX, innerY, innerWidth, innerHeight, 4, 1);
+
+  // flat surface
+  display->fillRect(innerX, innerY, innerWidth, 4, 1);
 }
