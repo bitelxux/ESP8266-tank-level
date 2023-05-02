@@ -8,7 +8,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 */
 
 //Libraries
-#include <DHT.h>
+
 #include <FS.h>
 #include <ArduinoJson.h>     // 5.13.5 !!
 #include <SoftwareSerial.h>
@@ -16,14 +16,14 @@ board: NodeMCU1.0 (ESP-12E Module)
 #include <ESP8266WebServer.h>
 
 #include <cnn.h>
+#include "sensor_dht.h"
 
 // This is for each variable to use it's real size when stored
 // in the EEPROM
 #pragma pack(push, 1)
-#define SENSOR_MODE 2
 
 #define BOARD_ID "board.A"
-#define VERSION "20230502.24"
+#define VERSION "20230502.51"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -58,15 +58,6 @@ board: NodeMCU1.0 (ESP-12E Module)
 // #define RECORDS_BASE_ADDRESS RESERVED_BYTES + 4 * COUNTER_SLOTS 
 //\\ EEPROM
 
-#define DHTTYPE DHT11
-#define DHTPIN  12
-
-DHT dht(DHTPIN, DHTTYPE, 11); // 11 works fine for ESP8266
- 
-float humidity, temp_f;  // Values read from sensor
-String webString="";     // String to display
-unsigned long previousMillis = 0;        // will store last temp was read
-const long interval = 2000;              // interval at which to read sensor
 
 // WiFiManager parameteres
 #define SERVER_LABEL "SERVER_IP"
@@ -77,7 +68,8 @@ unsigned long rb_last_change = 0;
 int rb_required_time = 3;
 boolean time_to_reset = false;
 
-App *app = NULL;
+DHT11_sensor* sensor = NULL;
+App* app = NULL;
 
 //flag for saving data
 bool shouldSaveConfig = false;
@@ -332,71 +324,33 @@ void registerNewReading(){
   int counter;
   char buffer[100];
 
-  int t = int(readTemperature());
-  int h = int(readHumidity());
+  int value = sensor->read();
 
-  if (isnan(t) || t == 2147483647){
-    app->log("Error reading temperature");
-    t = 666;
-  }
-
-  if (isnan(h) || h == 2147483647){
-    app->log("Error reading humidity");
-    h = 666;
-  }
-
-  // if both values are errors, don't send anything
-  if (t == 666 && h == 666){
+  if (value == 666){
     return;
   }
-
-  sprintf(buffer, "T: %i, H: %i", t, h);
-  Serial.println(buffer);
-  app->log(buffer);
-
-  return;
-
-  /*
-  if (distance <= 0){
-    app->log("Error reading value from sensor");
-    return;
-  }
-
-  sprintf(buffer, "LOG: read distance is %d", distance);
-  app->log(buffer);
 
   unsigned long now = app->getEpochSeconds();
   if (now){
-    sprintf(buffer, "%s/add/%d:%d", baseURL, now, distance);
+    sprintf(buffer, "%s/add/%d:%d", baseURL, now, value);
 
     // try to send to the server
     // if fails, store locally for further retrying
     if (app->send(buffer)){
       drawSend();
-      sprintf(buffer, "Sent %d:%d", now, distance);
+      sprintf(buffer, "Sent %d:%d", now, value);
       app->log(buffer);
     }
     else{
       drawStore();
-      counter = writeReading(now, distance);
+      counter = writeReading(now, value);
     }
         
   }
   else{
       app->log("Warning: Not handling reading as time is not synced");
   }
-  */
 
-}
-
-int readTemperature(){
-  float t = dht.readTemperature();
-  return t;
-}
-
-int readHumidity(){
-  float h = dht.readHumidity();
-  return h;
 }
 
 void flushStoredData(){
@@ -890,10 +844,12 @@ int incBoots(){
 
 void setup() {
 
-  app = new App(BOARD_ID, log_server);
-
   Serial.begin(115200); 
-  dht.begin();
+
+  app = new App(BOARD_ID, log_server);
+  sensor = new DHT11_sensor(app);
+
+  sensor->init();
 
   /*
   app->wifiManager->resetSettings();
@@ -908,10 +864,8 @@ void setup() {
   initOLED();
   EEPROM.begin(EEPROM_SIZE);
 
-  pinMode(DHTPIN, OUTPUT); // Initializing Trigger Output and Echo Input
-
   app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app->addTimer(2 * 1000, registerNewReading, "registerNewReading");
+  app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app->addTimer(1000, updateDisplay, "updateDisplay");
   app->addTimer(1000, isTimeToReset, "isTimeToReset");
   app->addTimer(30*1000, checkConnection, "checkConnection");
