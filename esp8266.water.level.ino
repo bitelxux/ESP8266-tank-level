@@ -23,7 +23,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 #pragma pack(push, 1)
 
 #define BOARD_ID "board.A"
-#define VERSION "20230502.71"
+#define VERSION "20230502.86"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -222,11 +222,11 @@ void updateDisplay(){
   }
 
   if (WiFi.status() == WL_CONNECTED){
-      display.drawBitmap(112, 0, wifi_bmp, 16, 16, 1);
+      display.drawBitmap(110, 0, wifi_bmp, 16, 16, 1);
   }
   else
   {
-      display.drawBitmap(112, 0, nowifi_bmp, 16, 16, 1);
+      display.drawBitmap(110, 0, nowifi_bmp, 16, 16, 1);
   }
 
   display.setTextSize(1);             // Normal 1:1 pixel scale
