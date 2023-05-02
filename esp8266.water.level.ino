@@ -8,20 +8,22 @@ board: NodeMCU1.0 (ESP-12E Module)
 */
 
 //Libraries
+#include <DHT.h>
 #include <FS.h>
-#include <cnn.h>
 #include <ArduinoJson.h>     // 5.13.5 !!
 #include <SoftwareSerial.h>
 
 #include <ESP8266WebServer.h>
+
+#include <cnn.h>
 
 // This is for each variable to use it's real size when stored
 // in the EEPROM
 #pragma pack(push, 1)
 #define SENSOR_MODE 2
 
-#define BOARD_ID "tank.Y"
-#define VERSION "20230422.239"
+#define BOARD_ID "board.A"
+#define VERSION "20230502.24"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -56,21 +58,15 @@ board: NodeMCU1.0 (ESP-12E Module)
 // #define RECORDS_BASE_ADDRESS RESERVED_BYTES + 4 * COUNTER_SLOTS 
 //\\ EEPROM
 
-// for sensor mode 0
-#define TRIGGER_PIN 14
-#define ECHO_PIN 12
-#define USONIC_DIV 58.0
+#define DHTTYPE DHT11
+#define DHTPIN  12
 
-// for sensor mode 1
-// requires to solder a 47K resistor
-#define TX 14
-#define RX 12
-
-#if (SENSOR_MODE == 1)
-  int (*readSensor)() = &readSensor_mode1;
-#else
-  int (*readSensor)() = &readSensor_mode2;
-#endif
+DHT dht(DHTPIN, DHTTYPE, 11); // 11 works fine for ESP8266
+ 
+float humidity, temp_f;  // Values read from sensor
+String webString="";     // String to display
+unsigned long previousMillis = 0;        // will store last temp was read
+const long interval = 2000;              // interval at which to read sensor
 
 // WiFiManager parameteres
 #define SERVER_LABEL "SERVER_IP"
@@ -103,22 +99,12 @@ unsigned short int RECORDS_BASE_ADDRESS = RESERVED_BYTES + 4 * COUNTER_SLOTS;
 unsigned short int MAX_RECORDS = (EEPROM_SIZE - RECORDS_BASE_ADDRESS)/sizeof(Reading) -1;
 // TODO review that -1. It's not the best approach
 
-// all distances in meters
-float TANK_RADIUS = 0.6;
-float TANK_EMPTY_DISTANCE = 1.170;
-float TANK_FULL_DISTANCE= 0.21;
-float REMAINING_WATER_HEIGHT= 0.19;
-
 // circular buffer
 int sum = 0;
 int elementCount = 0;
 const int windowSize = 5;
 int circularBuffer[windowSize];
 int* circularBufferAccessor = circularBuffer;
-
-// pre-calculated
-float piR2=3.141516*TANK_RADIUS*TANK_RADIUS;
-float MAX_VOLUME = 1000 * piR2 * (TANK_EMPTY_DISTANCE + REMAINING_WATER_HEIGHT);
 
 char buffer[200];
 unsigned char dataBuffer[4] = {0};
@@ -128,7 +114,6 @@ int lastReading = 0;
 int distance =  0;
 int previous_distance = 0;
 
-SoftwareSerial sensor(RX, TX);
 
 // prototipes
 void flushStoredData();
@@ -209,6 +194,7 @@ void clearSection(int x, int y, int x1, int y1){
 
 void drawTank(){
 
+  /*
   int outerX = 90;
   int outerY = 18;
   int outerWidth = 37;
@@ -223,6 +209,7 @@ void drawTank(){
 
   // flat surface
   display.fillRect(innerX, innerY, innerWidth, 4, 1);
+  */
 
 }
 
@@ -311,22 +298,6 @@ void initOLED(){
   //delay(2000); // Pause for 2 seconds
 }
 
-// OLED
-
-int calcLitres(short int distance){
-
-    float fd = distance/1000.0; // meters
-    float h = max((float)0.0, TANK_EMPTY_DISTANCE - fd);
-    float v = piR2 * h * 1000;
-
-    // There is some remaining water under the floating switch
-    // that is not usable because the pumb is off at this level.
-    // Yet, it is water in the tank
-    v += piR2 * REMAINING_WATER_HEIGHT * 1000;
-
-    return (int) v;
-}
-
 void appendToBuffer(short int value)
 {
   *circularBufferAccessor = value;
@@ -357,19 +328,35 @@ bool isServerAlive(){
 }
 
 void registerNewReading(){
-  int distance;
+  bool error = false;
   int counter;
   char buffer[100];
 
-  // some attempts to read a value from sensor
-  for (int i=0; i<10; i++){
-      distance = readSensor();
-      if (distance != -1){
-        break;
-      }
-      delay(20);
+  int t = int(readTemperature());
+  int h = int(readHumidity());
+
+  if (isnan(t) || t == 2147483647){
+    app->log("Error reading temperature");
+    t = 666;
   }
 
+  if (isnan(h) || h == 2147483647){
+    app->log("Error reading humidity");
+    h = 666;
+  }
+
+  // if both values are errors, don't send anything
+  if (t == 666 && h == 666){
+    return;
+  }
+
+  sprintf(buffer, "T: %i, H: %i", t, h);
+  Serial.println(buffer);
+  app->log(buffer);
+
+  return;
+
+  /*
   if (distance <= 0){
     app->log("Error reading value from sensor");
     return;
@@ -378,97 +365,43 @@ void registerNewReading(){
   sprintf(buffer, "LOG: read distance is %d", distance);
   app->log(buffer);
 
-  int litres = calcLitres(distance);
-  lastReading = litres;
-
   unsigned long now = app->getEpochSeconds();
   if (now){
-    sprintf(buffer, "%s/add/%d:%d", baseURL, now, litres);
+    sprintf(buffer, "%s/add/%d:%d", baseURL, now, distance);
 
     // try to send to the server
     // if fails, store locally for further retrying
     if (app->send(buffer)){
       drawSend();
-      sprintf(buffer, "Sent %d:%d", now, litres);
+      sprintf(buffer, "Sent %d:%d", now, distance);
       app->log(buffer);
     }
     else{
       drawStore();
-      counter = writeReading(now, litres);
+      counter = writeReading(now, distance);
     }
         
   }
   else{
       app->log("Warning: Not handling reading as time is not synced");
   }
+  */
 
 }
 
-// Trigger + Echo mode
-int readSensor_mode1(){
-    long t = 0; // Measure: Put up Trigger...
-    digitalWrite(TRIGGER_PIN, HIGH); // Wait for 11 µs ...
-    delayMicroseconds(11); // Put the trigger down ...
-    digitalWrite(TRIGGER_PIN, LOW); // Wait for the echo ...
-    t = pulseIn(ECHO_PIN, HIGH);
-
-    int mm = t/(29.2*2)*10;
-
-    //sprintf(buffer, "duration was %d. mm was %d", t, mm);
-    //app->log(buffer);
-
-    // wrong reading
-    if (t == 0){
-        return -1;
-    }
-
-    return(mobileAverage(mm));
+int readTemperature(){
+  float t = dht.readTemperature();
+  return t;
 }
 
-
-// read from serial. Requires a 47K resistor soldered on the board.
-int readSensor_mode2(){
-
-   short int distance = 0;
-
-   // Flush old readings from sensor
-   while (sensor.available()){
-     delay(5);
-     sensor.read();
-   }
-   delay(20);
-
-   if (sensor.available() > 0){
-       delay(4);
-    
-       if (sensor.read() == 0xFF){
-          dataBuffer[0] = 0xFF;
-          for (int i=1; i<4; i++){
-            dataBuffer[i] = sensor.read();
-          }
-       }
-    
-       //sprintf(buffer, "lectura: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-       //app->log(buffer);
-    
-       CS = dataBuffer[0] + dataBuffer[1] + dataBuffer[2];
-    
-       if (dataBuffer[3] == CS){
-         distance = (dataBuffer[1] << 8) + dataBuffer[2];
-         //sprintf(buffer, "lectura: %d", distance);
-         //app->log(buffer);
-         return mobileAverage(distance);
-       }
-       else{
-         sprintf(buffer, "CS Error: %02X,%02X,%02X,%02X", dataBuffer[0], dataBuffer[1], dataBuffer[2], dataBuffer[3]);
-         app->log(buffer);
-         return -1;
-       }
-   }
+int readHumidity(){
+  float h = dht.readHumidity();
+  return h;
 }
 
 void flushStoredData(){
 
+  return;
 
   Reading reading;  
   unsigned short int counter = readCounter();
@@ -960,6 +893,7 @@ void setup() {
   app = new App(BOARD_ID, log_server);
 
   Serial.begin(115200); 
+  dht.begin();
 
   /*
   app->wifiManager->resetSettings();
@@ -974,19 +908,10 @@ void setup() {
   initOLED();
   EEPROM.begin(EEPROM_SIZE);
 
-  if (SENSOR_MODE == 2){
-      sensor.begin(9600);
-  }
-  else
-  {
-      pinMode(TRIGGER_PIN, OUTPUT); // Initializing Trigger Output and Echo Input
-      pinMode(ECHO_PIN, INPUT);
-      digitalWrite(TRIGGER_PIN, LOW); // Reset the trigger pin and wait a half a second
-      delayMicroseconds(500);  
-  }
+  pinMode(DHTPIN, OUTPUT); // Initializing Trigger Output and Echo Input
 
   app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
+  app->addTimer(2 * 1000, registerNewReading, "registerNewReading");
   app->addTimer(1000, updateDisplay, "updateDisplay");
   app->addTimer(1000, isTimeToReset, "isTimeToReset");
   app->addTimer(30*1000, checkConnection, "checkConnection");
