@@ -22,6 +22,9 @@
 
 class SR04T_sensor{
     public:
+
+        char* READ_LABEL = "Litros: ";
+
         App* app = NULL;
         SoftwareSerial* sensor = NULL;
 

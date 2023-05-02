@@ -12,7 +12,7 @@
 #pragma pack(push, 1)
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20230502.260"
+#define VERSION "20230502.261"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -215,7 +215,7 @@ void updateDisplay(){
   display.print(BOARD_ID);
 
   display.setCursor(0,18);
-  display.print("Litros: ");
+  display.print(sensor->READ_LABEL);
   display.setCursor(46,18);            
   display.print(lastReading);
 
