@@ -12,7 +12,7 @@
 #pragma pack(push, 1)
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20230502.261"
+#define VERSION "20230502.262"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -880,6 +880,7 @@ void setup() {
 
   app = new App(BOARD_ID, log_server);
   sensor = new SR04T_sensor(app);
+  sensor->init();
 
   Serial.begin(115200); 
 
