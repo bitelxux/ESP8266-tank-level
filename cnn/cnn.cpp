@@ -62,7 +62,6 @@ void App::startWiFiManager(){
   ArduinoOTA.begin();
 }
 
-
 void App::blinkLED(){
      digitalWrite(this->LED, !digitalRead(this->LED));
 }
@@ -91,7 +90,6 @@ void App::addTimer(int millis, AppCallback function, char*name){
 	timer->next = newTimer;
 }
 
-
 void App::addTimer(int millis, function_callback function, char*name){
 
 	Timer* newTimer = new Timer();
@@ -115,7 +113,6 @@ void App::addTimer(int millis, function_callback function, char*name){
 
 	timer->next = newTimer;
 }
-
 
 void App::attendTimers(){
 
@@ -240,5 +237,19 @@ String App::get(String what){
   else
   {
     return "ERROR";
+  }
+}
+
+void App::debug(char* level, unsigned short int channels, char* message){
+
+  char new_buffer[100];
+  sprintf(new_buffer, "[%s] %s", level, message);
+
+  if (channels & DEBUG_SERIAL || channels & DEBUG_ALL){
+    Serial.println(new_buffer);
+  }
+
+  if (channels & DEBUG_WIFI || channels & DEBUG_ALL){
+    this->log(new_buffer);
   }
 }

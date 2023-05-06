@@ -23,7 +23,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 #pragma pack(push, 1)
 
 #define BOARD_ID "board.A"
-#define VERSION "20230502.89"
+#define VERSION "20230506.96"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -62,8 +62,8 @@ board: NodeMCU1.0 (ESP-12E Module)
 // WiFiManager parameteres
 #define SERVER_LABEL "SERVER_IP"
 
-// Reset Button
-#define RESET_BUTTON 14
+#define SLEEP_PIN 5
+
 unsigned long rb_last_change = 0;
 int rb_required_time = 3;
 boolean time_to_reset = false;
@@ -642,35 +642,6 @@ void readConfigFile(){
   }
 }
 
-ICACHE_RAM_ATTR void resetButtonPushed() {
-
-    char buffer[20];
-    static int t0 = millis();
-    static bool armed = false;
-    
-    if (millis() - t0 < 200){
-       t0 = millis();
-       return;
-    }
-
-    if (!armed && digitalRead(RESET_BUTTON) == 0){ // pressed
-       t0 = millis();
-       armed = true;
-    }
-
-    if (armed && millis() - t0 > 10000){
-       armed = false;
-       time_to_reset = true;
-       return;
-    }
-    
-    if (digitalRead(RESET_BUTTON) == 1){ //released too soon
-       Serial.println("RESET not performed");      
-       armed = false;
-    }
-
-}
-
 void checkConnection()  {
     if (WiFi.status() != WL_CONNECTED) {
       WiFi.reconnect();
@@ -836,33 +807,33 @@ int incBoots(){
   return boots;
 }
 
+void _resetWifi(){
+  app->log("reset WIFI networks");
+  app->wifiManager->resetSettings();
+  ESP.restart();
+}
+
 void setup() {
 
-  Serial.begin(115200); 
+  int t0 = millis();
+
+  pinMode(SLEEP_PIN, INPUT);
 
   app = new App(BOARD_ID, log_server);
   sensor = new DHT11_sensor(app);
-
   sensor->init();
 
-  /*
-  app->wifiManager->resetSettings();
-  Serial.println("Wifi reseted");
-  delay(5000);
-  return;
-  */
-  
-  //set GPIO14 interrupt
-  attachInterrupt(digitalPinToInterrupt(RESET_BUTTON), resetButtonPushed, CHANGE);
-
-  initOLED();
+  Serial.begin(115200); 
   EEPROM.begin(EEPROM_SIZE);
 
   app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app->addTimer(300 * 1000, registerNewReading, "registerNewReading");
-  app->addTimer(1000, updateDisplay, "updateDisplay");
+  app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
   app->addTimer(1000, isTimeToReset, "isTimeToReset");
   app->addTimer(30*1000, checkConnection, "checkConnection");
+  if (!digitalRead(SLEEP_PIN)){
+      initOLED();
+      app->addTimer(1000, updateDisplay, "updateDisplay");
+  }
 
   readConfigFile();
   WiFiManagerParameter pserver(SERVER_LABEL, "Server IP", server, 16);
@@ -907,24 +878,47 @@ void setup() {
   restServer.onNotFound(handleNotFound);
   // Start server
   restServer.begin();
-  Serial.println("HTTP server started");
+  app->debug("INFO", DEBUG_ALL, "HTTP server started");
 
   unsigned short boots = incBoots();
   sprintf(buffer, "boot: %d", boots);
   Serial.println(buffer);
   app->log(buffer);
 
-  delay(5000); // wait for sensor to settle
+  restServer.handleClient();
+  app->attendTimers();
   registerNewReading();
-}
 
-void _resetWifi(){
-  app->log("reset WIFI networks");
-  app->wifiManager->resetSettings();
-  ESP.restart();
+  Serial.print("took ");
+  Serial.print(millis() -t0);
+  Serial.println(" milliseconds");
+
+  int go_to_sleep = digitalRead(SLEEP_PIN);
+
+  if (go_to_sleep == HIGH) {
+    app->debug("INFO", DEBUG_ALL, "SLEEP jumper is closed. Going got a nap");
+    ESP.deepSleep(30e6);
+    delay(100);
+  }
+  else{
+    app->debug("INFO", DEBUG_ALL, "SLEEP jumper is open. It will not sleep");
+  }
 }
 
 void loop() {
-  app->attendTimers();
-  restServer.handleClient();
+
+    // this code will only run when SLEEP jumper is open (GPIO5 NOT connected to VCC)
+    app->attendTimers();
+    restServer.handleClient();
+    delay(200);
+
+    // jumper can be closed on open with board running
+    int go_to_sleep = digitalRead(SLEEP_PIN);
+    
+    if (go_to_sleep == HIGH) {
+      app->debug("INFO", DEBUG_ALL, "SLEEP jumper is closed. Going got a nap");
+      ESP.deepSleep(30e6);
+      delay(100);
+    }
 }
+
