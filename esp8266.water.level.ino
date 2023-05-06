@@ -11,8 +11,8 @@
 // in the EEPROM
 #pragma pack(push, 1)
 
-#define BOARD_ID "tank.Z"
-#define VERSION "20230502.262"
+#define BOARD_ID "tank.batteries"
+#define VERSION "20230506.10"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -53,8 +53,10 @@
 // WiFiManager parameteres
 #define SERVER_LABEL "SERVER_IP"
 
-// Reset Button
-#define RESET_BUTTON 14
+// jumper to vcc -> sleep
+// jumper open -> don't sleep
+#define SLEEP_PIN 5
+
 unsigned long rb_last_change = 0;
 int rb_required_time = 3;
 boolean time_to_reset = false;
@@ -319,7 +321,7 @@ void flushStoredData(){
   unsigned short int sent = 0;
   int regSize = sizeof(reading);
   char buffer[100];
- 
+
   // You have to start server.py at BASE_URL
   if (!isServerAlive()){
     sprintf(buffer, "[FLUSH_STORED_DATA] Server doesn't respond. I'll try later.");
@@ -611,35 +613,6 @@ void readConfigFile(){
   }
 }
 
-ICACHE_RAM_ATTR void resetButtonPushed() {
-
-    char buffer[20];
-    static int t0 = millis();
-    static bool armed = false;
-    
-    if (millis() - t0 < 200){
-       t0 = millis();
-       return;
-    }
-
-    if (!armed && digitalRead(RESET_BUTTON) == 0){ // pressed
-       t0 = millis();
-       armed = true;
-    }
-
-    if (armed && millis() - t0 > 10000){
-       armed = false;
-       time_to_reset = true;
-       return;
-    }
-    
-    if (digitalRead(RESET_BUTTON) == 1){ //released too soon
-       Serial.println("RESET not performed");      
-       armed = false;
-    }
-
-}
-
 void checkConnection()  {
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("Reconnecting to WiFi...");
@@ -876,7 +849,17 @@ int incBoots(){
   return boots;
 }
 
+void _resetWifi(){
+  app->log("reset WIFI networks");
+  app->wifiManager->resetSettings();
+  ESP.restart();
+}
+
 void setup() {
+
+  int t0 = millis();
+
+  pinMode(SLEEP_PIN, INPUT);
 
   app = new App(BOARD_ID, log_server);
   sensor = new SR04T_sensor(app);
@@ -884,17 +867,6 @@ void setup() {
 
   Serial.begin(115200); 
 
-  /*
-  app->wifiManager->resetSettings();
-  Serial.println("Wifi reseted");
-  delay(5000);
-  return;
-  */
-  
-  //set GPIO14 interrupt
-  attachInterrupt(digitalPinToInterrupt(RESET_BUTTON), resetButtonPushed, CHANGE);
-
-  initOLED();
   EEPROM.begin(EEPROM_SIZE);
 
   app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
@@ -953,18 +925,39 @@ void setup() {
   Serial.println(buffer);
   app->log(buffer);
 
-  delay(5000); // wait for sensor to settle
+  restServer.handleClient();
+  app->attendTimers();
   registerNewReading();
-}
 
-void _resetWifi(){
-  app->log("reset WIFI networks");
-  app->wifiManager->resetSettings();
-  ESP.restart();
+  Serial.print("took ");
+  Serial.print(millis() -t0);
+  Serial.println(" milliseconds");
+
+  int go_to_sleep = digitalRead(SLEEP_PIN);
+
+  if (go_to_sleep == HIGH) {
+    app->debug("INFO", DEBUG_ALL, "SLEEP jumper is closed. Going got a nap");
+    ESP.deepSleep(30e6);
+    delay(100);
+  }
+  else{
+    app->debug("INFO", DEBUG_ALL, "SLEEP jumper is open. It will not sleep");
+  }
 }
 
 void loop() {
-  app->attendTimers();
-  restServer.handleClient();
+
+    // this code will only run when SLEEP jumper is open (GPIO5 NOT connected to VCC)
+    app->attendTimers();
+    restServer.handleClient();
+
+    // jumper can be closed on open with board running
+    int go_to_sleep = digitalRead(SLEEP_PIN);
+    
+    if (go_to_sleep == HIGH) {
+      app->debug("INFO", DEBUG_ALL, "SLEEP jumper is closed. Going got a nap");
+      ESP.deepSleep(30e6);
+      delay(100);
+    }
 }
 
