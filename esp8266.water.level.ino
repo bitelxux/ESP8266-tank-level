@@ -12,7 +12,7 @@
 #pragma pack(push, 1)
 
 #define BOARD_ID "tank.batteries"
-#define VERSION "20230506.10"
+#define VERSION "20230506.12"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -867,13 +867,14 @@ void setup() {
 
   Serial.begin(115200); 
 
-  EEPROM.begin(EEPROM_SIZE);
-
   app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
   app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
-  app->addTimer(1000, updateDisplay, "updateDisplay");
   app->addTimer(1000, isTimeToReset, "isTimeToReset");
   app->addTimer(30*1000, checkConnection, "checkConnection");
+  if (!digitalRead(SLEEP_PIN)){
+      initOLED();
+      app->addTimer(1000, updateDisplay, "updateDisplay");
+  }
 
   readConfigFile();
   WiFiManagerParameter pserver(SERVER_LABEL, "Server IP", server, 16);
