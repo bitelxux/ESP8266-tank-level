@@ -7,6 +7,8 @@ https://arduino.esp8266.com/stable/package_esp8266com_index.json
 board: NodeMCU1.0 (ESP-12E Module)
 */
 
+#define SLEEP_TIME 10*1000000
+
 //Libraries
 
 #include <FS.h>
@@ -23,7 +25,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 #pragma pack(push, 1)
 
 #define BOARD_ID "board.A"
-#define VERSION "20230506.96"
+#define VERSION "20230509.164"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -62,7 +64,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 // WiFiManager parameteres
 #define SERVER_LABEL "SERVER_IP"
 
-#define SLEEP_PIN 5
+#define SLEEP_PIN 13
 
 unsigned long rb_last_change = 0;
 int rb_required_time = 3;
@@ -194,11 +196,17 @@ void drawStore(){
 }
 
 void drawSend(){
+  if (digitalRead(SLEEP_PIN)){
+    return;
+  }
   display.drawBitmap(94, 0, send_bmp, 16, 16, 1);
   display.display();
 }
 
 void updateDisplay(){
+
+  unsigned int t = millis();
+  unsigned int t0 = millis();
 
   if (!displayInitialized) {
     Serial.println("Display not initialized");
@@ -212,7 +220,7 @@ void updateDisplay(){
   if (readWarnings()){
       display.drawBitmap(18, 0, warning_bmp, 16, 16, 1);
   }
-
+ 
   if (isServerAlive()){
       display.drawBitmap(0, 0, connected_bmp, 16, 16, 1);
   }
@@ -298,8 +306,8 @@ int mobileAverage(int value)
 
 bool isServerAlive(){
     sprintf(buffer, "%s/ping", baseURL);
-    //Serial.println(buffer);
-    return (app->send(buffer));
+    bool result = app->send(buffer);
+    return result;
 }
 
 void registerNewReading(){
@@ -308,6 +316,7 @@ void registerNewReading(){
   char buffer[100];
 
   int value = sensor->read();
+
   lastReading = value;
 
   if (value == 666){
@@ -315,6 +324,7 @@ void registerNewReading(){
   }
 
   unsigned long now = app->getEpochSeconds();
+  
   if (now){
     sprintf(buffer, "%s/add/%d:%d", baseURL, now, value);
 
@@ -815,8 +825,6 @@ void _resetWifi(){
 
 void setup() {
 
-  int t0 = millis();
-
   pinMode(SLEEP_PIN, INPUT);
 
   app = new App(BOARD_ID, log_server);
@@ -826,13 +834,13 @@ void setup() {
   Serial.begin(115200); 
   EEPROM.begin(EEPROM_SIZE);
 
-  app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
-  app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
-  app->addTimer(1000, isTimeToReset, "isTimeToReset");
-  app->addTimer(30*1000, checkConnection, "checkConnection");
   if (!digitalRead(SLEEP_PIN)){
       initOLED();
       app->addTimer(1000, updateDisplay, "updateDisplay");
+      app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
+      app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
+      app->addTimer(1000, isTimeToReset, "isTimeToReset");
+      app->addTimer(30*1000, checkConnection, "checkConnection");
   }
 
   readConfigFile();
@@ -872,52 +880,45 @@ void setup() {
     //end save
   }
 
-  // Set server routing
-  restServerRouting();
-  // Set not found response
-  restServer.onNotFound(handleNotFound);
-  // Start server
-  restServer.begin();
-  app->debug("INFO", DEBUG_ALL, "HTTP server started");
-
   unsigned short boots = incBoots();
   sprintf(buffer, "boot: %d", boots);
   Serial.println(buffer);
   app->log(buffer);
 
-  restServer.handleClient();
-  app->attendTimers();
-  registerNewReading();
-
-  Serial.print("took ");
-  Serial.print(millis() -t0);
-  Serial.println(" milliseconds");
-
-  int go_to_sleep = digitalRead(SLEEP_PIN);
-
-  if (go_to_sleep == HIGH) {
-    app->debug("INFO", DEBUG_ALL, "SLEEP jumper is closed. Going got a nap");
-    ESP.deepSleep(30e6);
+  if (digitalRead(SLEEP_PIN)){
+    app->debug("INFO", DEBUG_ALL, "There is no HTTP server in DeepSleep mode");  
+    registerNewReading();
+    flushStoredData();
+    app->debug("INFO", DEBUG_ALL, "SLEEP jumper is closed. Going for a nap");
+    ESP.deepSleep(SLEEP_TIME);
     delay(100);
   }
-  else{
+  else {
     app->debug("INFO", DEBUG_ALL, "SLEEP jumper is open. It will not sleep");
+    // Set server routing
+    restServerRouting();
+    // Set not found response
+    restServer.onNotFound(handleNotFound);
+    // Start server
+    restServer.begin();
+    app->debug("INFO", DEBUG_ALL, "HTTP server started");
   }
+
 }
 
 void loop() {
 
+
     // this code will only run when SLEEP jumper is open (GPIO5 NOT connected to VCC)
     app->attendTimers();
     restServer.handleClient();
-    delay(200);
 
     // jumper can be closed on open with board running
     int go_to_sleep = digitalRead(SLEEP_PIN);
     
     if (go_to_sleep == HIGH) {
       app->debug("INFO", DEBUG_ALL, "SLEEP jumper is closed. Going got a nap");
-      ESP.deepSleep(30e6);
+      ESP.deepSleep(SLEEP_TIME);
       delay(100);
     }
 }
