@@ -7,7 +7,7 @@ https://arduino.esp8266.com/stable/package_esp8266com_index.json
 board: NodeMCU1.0 (ESP-12E Module)
 */
 
-#define SLEEP_TIME 10*1000000
+#define SLEEP_TIME 15*60*1000000 // 15 minutes
 
 //Libraries
 
@@ -24,8 +24,8 @@ board: NodeMCU1.0 (ESP-12E Module)
 // in the EEPROM
 #pragma pack(push, 1)
 
-#define BOARD_ID "board.A"
-#define VERSION "20230509.164"
+#define BOARD_ID "board.Y"
+#define VERSION "20230511.173"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -836,11 +836,14 @@ void setup() {
 
   if (!digitalRead(SLEEP_PIN)){
       initOLED();
+      display.ssd1306_command(SSD1306_DISPLAYON);
       app->addTimer(1000, updateDisplay, "updateDisplay");
       app->addTimer(30 * 1000, flushStoredData, "flushStoredData");
       app->addTimer(60 * 1000, registerNewReading, "registerNewReading");
       app->addTimer(1000, isTimeToReset, "isTimeToReset");
       app->addTimer(30*1000, checkConnection, "checkConnection");
+  }else {
+      display.ssd1306_command(SSD1306_DISPLAYOFF);
   }
 
   readConfigFile();
@@ -918,6 +921,7 @@ void loop() {
     
     if (go_to_sleep == HIGH) {
       app->debug("INFO", DEBUG_ALL, "SLEEP jumper is closed. Going got a nap");
+      display.ssd1306_command(SSD1306_DISPLAYOFF);
       ESP.deepSleep(SLEEP_TIME);
       delay(100);
     }
