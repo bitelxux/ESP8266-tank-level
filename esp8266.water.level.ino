@@ -25,7 +25,7 @@ board: NodeMCU1.0 (ESP-12E Module)
 #pragma pack(push, 1)
 
 #define BOARD_ID "board.Y"
-#define VERSION "20230511.173"
+#define VERSION "20231224.13"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -888,7 +888,8 @@ void setup() {
   Serial.println(buffer);
   app->log(buffer);
 
-  if (digitalRead(SLEEP_PIN)){
+  //if (digitalRead(SLEEP_PIN)){
+  if (false){
     app->debug("INFO", DEBUG_ALL, "There is no HTTP server in DeepSleep mode");  
     registerNewReading();
     flushStoredData();
@@ -919,7 +920,8 @@ void loop() {
     // jumper can be closed on open with board running
     int go_to_sleep = digitalRead(SLEEP_PIN);
     
-    if (go_to_sleep == HIGH) {
+    // if (go_to_sleep == HIGH) {
+    if (false) {
       app->debug("INFO", DEBUG_ALL, "SLEEP jumper is closed. Going got a nap");
       display.ssd1306_command(SSD1306_DISPLAYOFF);
       ESP.deepSleep(SLEEP_TIME);

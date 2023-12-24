@@ -1,3 +1,7 @@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-type"
+
+
 #include <Arduino.h>
 #include "sensor_dht.h"
 
@@ -52,3 +56,5 @@ void DHT11_sensor::draw(Adafruit_SSD1306* display, int value){
   // flat surface
   display->fillRect(innerX, innerY, innerWidth, 4, 1);
 }
+
+#pragma GCC diagnostic pop
