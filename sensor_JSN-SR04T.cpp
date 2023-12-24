@@ -149,6 +149,7 @@ int SR04T_sensor::readSensor_mode2(){
          return -1;
        }
    }
+   return -1;
 }
 
 void SR04T_sensor::draw(Adafruit_SSD1306* display, int value){

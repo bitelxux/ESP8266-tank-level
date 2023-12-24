@@ -12,7 +12,7 @@
 #pragma pack(push, 1)
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20230502.262"
+#define VERSION "20231224.278"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -554,6 +554,16 @@ int writeReading(unsigned long in_timestamp, short int in_value){
   return counter;
 }
 
+void dumpEEPROM(){
+  unsigned short _byte;
+  int offset = 0;
+  for (int i = 0; i < 10; i++) {
+    _byte = EEPROM.read(i);
+    offset += sprintf(buffer + offset, "0x%04X: %d\n",i ,_byte);
+  }
+  restServer.send(200, "test/plain", buffer);
+}
+
 void resetEEPROM(){
   int t0 = millis();
   for (int i=0; i < EEPROM_SIZE; i++){
@@ -810,6 +820,7 @@ void help() {
                     "WIFISignal: WIFI RSSI\n"
                     "scanNetworks: info about WIFI networks\n"
                     "warnings: lists current active warnings\n"
+                    "dumpEEPROM: dumps eeprom up to local readings\n"
                     "warnings/clear: clear current warnings\n\n", VERSION
             );
     restServer.send(200, "text/plain", buffer);
@@ -834,6 +845,7 @@ void restServerRouting() {
     restServer.on(F("/resetWIFI"), HTTP_GET, resetWIFI);
     restServer.on(F("/WIFISignal"), HTTP_GET, wifi_signal);
     restServer.on(F("/scanNetworks"), HTTP_GET, scan_networks);
+    restServer.on(F("/dumpEEPROM"), HTTP_GET, dumpEEPROM);
     restServer.on(F("/warnings"), HTTP_GET, restReadWarnings);
     restServer.on(F("/warnings/clear"), HTTP_GET, clearWarnings);
 }
