@@ -12,7 +12,7 @@
 #pragma pack(push, 1)
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20231224.278"
+#define VERSION "20231226.269"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -555,13 +555,44 @@ int writeReading(unsigned long in_timestamp, short int in_value){
 }
 
 void dumpEEPROM(){
+
   unsigned short _byte;
   int offset = 0;
-  for (int i = 0; i < 10; i++) {
+  int n = -1;
+  boolean usingDefault = true;
+
+  int freeRAM = ESP.getFreeHeap();
+
+  sprintf(buffer, "free RAM = %d", freeRAM);
+  app->log(buffer);
+  
+  if ( restServer.hasArg("n") ) {
+    n = restServer.arg("n").toInt();
+    usingDefault = false;
+  }
+  else {
+    n = 10;
+  }
+
+  if ( n*12 > freeRAM) {
+     restServer.send(200, "text/plain", "Not enough free RAM. Try to request less positions\n");
+     return;
+  }
+
+  char buffer[n*12];
+
+  if ( usingDefault ){
+    sprintf(buffer, "'n' hasn't been specified. Defaulting to 10\n\n");
+    offset=strlen(buffer);
+    n = 10;
+  }
+
+  for (int i = 0; i < n; i++) {
     _byte = EEPROM.read(i);
     offset += sprintf(buffer + offset, "0x%04X: %d\n",i ,_byte);
   }
-  restServer.send(200, "test/plain", buffer);
+
+  restServer.send(200, "text/plain", buffer);
 }
 
 void resetEEPROM(){
@@ -820,7 +851,7 @@ void help() {
                     "WIFISignal: WIFI RSSI\n"
                     "scanNetworks: info about WIFI networks\n"
                     "warnings: lists current active warnings\n"
-                    "dumpEEPROM: dumps eeprom up to local readings\n"
+                    "dumpEEPROM[?n=<positions_to_read>]: dumps EEPROM, n=10 if not specified\n"
                     "warnings/clear: clear current warnings\n\n", VERSION
             );
     restServer.send(200, "text/plain", buffer);
