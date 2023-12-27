@@ -12,7 +12,7 @@
 #pragma pack(push, 1)
 
 #define BOARD_ID "tank.Z"
-#define VERSION "20231226.269"
+#define VERSION "20231227.272"
 
 //EEPROM
 #define EEPROM_SIZE 4096
@@ -622,6 +622,7 @@ void resetWIFI(){
 
 void readConfigFile(){
   Serial.println("mounting FS...");
+  strcpy(server, "");
 
   if (SPIFFS.begin()) {
     Serial.println("mounted file system");
@@ -953,7 +954,13 @@ void setup() {
   app->wifiManager->setSaveConfigCallback(saveConfigCallback);
   app->wifiManager->addParameter(&pserver);
 
-  app->startWiFiManager();
+  while (WiFi.status() != WL_CONNECTED) {
+    app->startWiFiManager();
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+  
+  Serial.println("Connected to WiFi");
 
   strcpy(server, pserver.getValue());
 

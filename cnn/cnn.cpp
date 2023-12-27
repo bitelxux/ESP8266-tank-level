@@ -52,14 +52,53 @@ App::App(const char* ID, const char* log_server){
 
 void App::startWiFiManager(){
   //this->wifiManager->resetSettings();
+
+  char passwd[20];
+
+  strcpy(passwd, this->wifiManager->getWiFiPass().c_str());
   
-  this->wifiManager->autoConnect("TankLevel");
+  Serial.print("SSID is [");
+  Serial.print(WiFi.SSID());
+  Serial.println("]");
   
-  IPAddress ip = WiFi.localIP();
-  sprintf(this->IP, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-    
-  this->initNTP();
-  ArduinoOTA.begin();
+  Serial.print("Password is [");
+  Serial.print(passwd);
+  Serial.println("]");
+
+  if (WiFi.SSID()){
+    Serial.println("tarting WIFI");
+    WiFi.begin(WiFi.SSID(), passwd);
+  } 
+
+  for (int i=0; i<30; i++){
+    if (WiFi.status() != WL_CONNECTED) {
+       Serial.print("Wifi not connected [");
+       Serial.print(WiFi.SSID());
+       Serial.println("]");
+       delay(1000);
+    }
+  }
+ 
+  if (WiFi.status() == WL_CONNECTED){
+    IPAddress ip = WiFi.localIP();
+    sprintf(this->IP, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+    Serial.print("Succesfully connected to WIFI [");
+    Serial.print(this->IP);
+    Serial.println("]");
+    this->initNTP();
+  }
+  else {
+    Serial.println("Wifi didn't connect");
+  }
+
+  if (WiFi.SSID() == ""){
+    Serial.println("Starting ArduinoOTA");
+    this->wifiManager->autoConnect("TankLevel");
+    ArduinoOTA.begin();
+  }
+  else {
+    Serial.println("Wifi manager not starting");
+  }
 }
 
 void App::blinkLED(){
