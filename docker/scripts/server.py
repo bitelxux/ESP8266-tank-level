@@ -33,6 +33,9 @@ def ping():
 
 def is_outlier(new_value, timestamp):
 
+    print("is_outlier is broken at the moment. to be fixed")
+    return False
+
     if os.path.isfile(SKIP_OUTLIER_DETECTION):
         log('server', f"Outlier detection is disabled. Delete {SKIP_OUTLIER_DETECTION} to re-enable")
         return False
