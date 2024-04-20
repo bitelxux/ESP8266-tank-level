@@ -18,6 +18,7 @@ def main():
 
 @app.route('/log/<string:msg>')
 def log(msg):
+    print("received: %s", msg)
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
     msg = f"{timestamp} {msg}"
 

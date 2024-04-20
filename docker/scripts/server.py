@@ -9,7 +9,7 @@ from flask import Flask, Markup, render_template, abort, request
 SKIP_OUTLIER_DETECTION = "/water_tank/SKIP_OUTLIER_DETECTION"
 
 client = InfluxDBClient(host='influxdb', port=8086, username='admin', password='admin')
-client.switch_database('tank')
+client.switch_database('devices')
 
 app = Flask(__name__)
 
@@ -64,10 +64,9 @@ def add(value):
 
         body = [
           {
-              "measurement": "readings",
+              "measurement": id,
               "time": int_timestamp,
               "fields": {
-                  "device_id": id,
                   "value": int_value
               }
           }
