@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# script to manually delete odd values. Tipically wrong spiking readings from sensor"
+
 # fix_tank_z <fromdate> <threshold>
 # example of use
 #  ./delete_from_tankz.sh 14-May-2024 850
