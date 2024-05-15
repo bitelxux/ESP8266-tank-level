@@ -11,7 +11,7 @@ THRESHOLD=$2
 
 function delete_row {
     local nanoseconds=$1
-    curl -G 'http://localhost:8086/query?pretty=true' --data-urlencode "db=devices" --data-urlencode "q=DELETE  FROM \"tank.Z\" WHERE time=$nanoseconds"
+    curl -s 'http://localhost:8086/query?pretty=true' --data-urlencode "db=devices" --data-urlencode "q=DELETE  FROM \"tank.Z\" WHERE time=$nanoseconds"
 }
 
 function clean_data {
