@@ -31,16 +31,14 @@ def main():
 def ping():
      return "pong"
 
-def is_outlier(new_value, timestamp):
+def is_outlier(device, new_value, timestamp):
 
-    print("is_outlier is broken at the moment. to be fixed")
-    return False
+    if device not in ['tank.Z']:
+        return False
 
     if os.path.isfile(SKIP_OUTLIER_DETECTION):
         log('server', f"Outlier detection is disabled. Delete {SKIP_OUTLIER_DETECTION} to re-enable")
         return False
-    else:
-        log('server', 'SKIP not found')
 
     if new_value in [960] or new_value > 1300:
         return True
@@ -68,7 +66,7 @@ def add(value):
         int_timestamp = int(timestamp) * 1000000000
         int_value = int(value)
 
-        if is_outlier(int_value, int_timestamp):
+        if is_outlier(id, int_value, int_timestamp):
             print(f"{int_value} seems to be an outlier")
             return(f"{int_value} seems to be an outlier")
 
