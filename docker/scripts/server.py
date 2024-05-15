@@ -33,6 +33,8 @@ def ping():
 
 def is_outlier(device, new_value, timestamp):
 
+    #TODO this is garbage. The whole outlier thing needs to be refactored to support different devices
+
     if device not in ['tank.Z']:
         return False
 
@@ -43,11 +45,18 @@ def is_outlier(device, new_value, timestamp):
     if new_value in [960] or new_value > 1300:
         return True
 
-    result = client.query(f"SELECT * FROM readings WHERE time <= {timestamp} ORDER BY time DESC LIMIT 1")
-    readings = list(result.get_points(measurement='readings'))
+    result = client.query(f"SELECT * FROM \"{device}\" WHERE time <= {timestamp} ORDER BY time DESC LIMIT 1")
+    readings = list(result.get_points(measurement=f"{device}"))
     values =  [reading['value'] for reading in readings]
 
-    return values and abs(new_value - values[0]) > 300
+    outlier = values and abs(new_value - values[0]) > 100
+
+    if outlier:
+        log(device, f"{new_value} is an outlier")
+    else:
+        log(device, f"{new_value} is NOT an outlier")
+
+    return outlier
 
 @app.route('/getSum/<string:id>')
 def getSum(id):
