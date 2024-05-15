@@ -2,4 +2,5 @@ build
 docker/grafana-data
 docker/scripts/robotits.log
 docker/server-scripts
+docker/scripts/SKIP_OUTLIER_DETECTION
 
