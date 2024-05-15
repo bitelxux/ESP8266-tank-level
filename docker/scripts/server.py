@@ -51,6 +51,13 @@ def is_outlier(new_value, timestamp):
 
     return values and abs(new_value - values[0]) > 300
 
+@app.route('/getSum/<string:id>')
+def getSum(id):
+    result = client.query(f"SELECT SUM(value) FROM {id} LIMIT 1")
+    # result[id] is a generator. In this case with only one value
+    for i in result[id]:
+      return(str(i['sum']))
+
 @app.route('/add/<string:value>')
 def add(value):
 
