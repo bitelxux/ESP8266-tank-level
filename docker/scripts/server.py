@@ -49,7 +49,7 @@ def is_outlier(device, new_value, timestamp):
     readings = list(result.get_points(measurement=f"{device}"))
     values =  [reading['value'] for reading in readings]
 
-    outlier = values and abs(new_value - values[0]) > 100
+    outlier = values and abs(new_value - values[0]) > 200
 
     if outlier:
         log(device, f"{new_value} is an outlier")
