@@ -8,7 +8,6 @@ services:
             max-size: "10m"
             max-file: "3"
     restart: always
-    restart: always
     environment:
       - INFLUXDB_DB=tank
       - INFLUXDB_ADMIN_USER=admin
@@ -30,9 +29,9 @@ services:
       - 8888:8888
       - 8889:8889
     command: /water_tank/start.sh
-    restart: always
   grafana:
-    image: grafana/grafana:9.0.7
+    #image: grafana/grafana:9.0.7
+    image: grafana/grafana:latest
     logging:
           options:
             max-size: "10m"
@@ -42,5 +41,9 @@ services:
       - ./grafana-data:/var/lib/grafana
     ports:
       - 3000:3000
+    environment:
+      - GF_DEFAULT_APP_MODE=production
+      - GF_DASHBOARDS_MIN_REFRESH_INTERVAL=0.1s
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=true
     user: "472"
 

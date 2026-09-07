@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 from datetime import datetime
-from flask import Flask, Markup, render_template
+from flask import Flask, render_template
 
 import logging
 
@@ -16,9 +17,9 @@ app = Flask(__name__)
 def main():
      return "I'm alive!"
 
-@app.route('/log/<string:msg>')
+@app.route('/log/<path:msg>')
 def log(msg):
-    print("received: %s", msg)
+    print("received: %s" % msg)
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
     msg = f"{timestamp} {msg}"
 

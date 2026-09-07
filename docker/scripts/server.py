@@ -4,7 +4,7 @@ import os
 import statistics as stats
 
 from influxdb import InfluxDBClient
-from flask import Flask, Markup, render_template, abort, request
+from flask import Flask, render_template, abort, request
 
 SKIP_OUTLIER_DETECTION = "/water_tank/SKIP_OUTLIER_DETECTION"
 
@@ -69,6 +69,8 @@ def getSum(id):
 def add(value):
 
     id = request.headers.get('device_id')
+    for i in request.headers.keys():
+        print(f"key: {i}")
     print(f"adding {id}:{value}")
     try:
         timestamp, value = value.split(":")
